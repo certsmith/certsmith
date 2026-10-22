@@ -366,8 +366,26 @@ ensure_portal_certs() {
     local rsa_crt="${tls_dir}/certsmith-rsa-fullchain.crt"
     local rsa_key="${tls_dir}/certsmith-rsa.key"
 
-    if [ ! -f "${ecc_crt}" ] || [ ! -f "${ecc_key}" ] || [ ! -f "${rsa_crt}" ] || [ ! -f "${rsa_key}" ]; then
-        echo "[certsmith] Portal Dual TLS certificates missing or incomplete. Generating on-the-fly..."
+    local san_matches=true
+    if [ -f "${rsa_crt}" ]; then
+        local current_sans
+        current_sans=$(openssl x509 -in "${rsa_crt}" -noout -text 2>/dev/null | grep -A 2 "Subject Alternative Name" || true)
+        for domain in "${CERTSMITH_DOMAINS_ARRAY[@]}"; do
+            if ! echo "${current_sans}" | grep -F -i -q "DNS:${domain}"; then
+                san_matches=false
+                break
+            fi
+        done
+    else
+        san_matches=false
+    fi
+
+    if [ ! -f "${ecc_crt}" ] || [ ! -f "${ecc_key}" ] || [ ! -f "${rsa_crt}" ] || [ ! -f "${rsa_key}" ] || [ "${san_matches}" = false ]; then
+        if [ "${san_matches}" = false ]; then
+            echo "[certsmith] Portal Dual TLS certificates missing, incomplete, or domain list changed. Generating..."
+        else
+            echo "[certsmith] Portal Dual TLS certificates missing or incomplete. Generating on-the-fly..."
+        fi
         generate_portal_certs
     else
         echo "[certsmith] Portal Dual TLS certificates verified."
