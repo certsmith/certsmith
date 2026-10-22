@@ -86,6 +86,25 @@ done
 echo "[certsmith-forge] All variables validated."
 
 # ------------------------------------------
+# Parse Multi-Domain Support
+# ------------------------------------------
+# Backward compatible: CERTSMITH_DOMAINS (comma-separated) or CERTSMITH_DOMAIN (single)
+RAW_DOMAINS="${CERTSMITH_DOMAINS:-${CERTSMITH_DOMAIN:-}}"
+if [ -z "${RAW_DOMAINS}" ]; then
+    echo "[certsmith-forge] FATAL: Neither CERTSMITH_DOMAINS nor CERTSMITH_DOMAIN is set in ${ENV_FILE}"
+    exit 1
+fi
+
+IFS=',' read -ra DOMAIN_ARRAY <<< "${RAW_DOMAINS}"
+for i in "${!DOMAIN_ARRAY[@]}"; do
+    DOMAIN_ARRAY[$i]=$(echo "${DOMAIN_ARRAY[$i]}" | xargs)
+done
+
+PRIMARY_DOMAIN="${DOMAIN_ARRAY[0]}"
+echo "[certsmith-forge] Primary domain (CN): ${PRIMARY_DOMAIN}"
+echo "[certsmith-forge] All domains (${#DOMAIN_ARRAY[@]}): ${DOMAIN_ARRAY[*]}"
+
+# ------------------------------------------
 # Helper: Build Subject DN
 # ------------------------------------------
 build_subject() {
@@ -309,6 +328,16 @@ echo "[certsmith-forge] =========================================="
 TLS_DIR="${DATA_DIR}/tls"
 mkdir -p "${TLS_DIR}"
 
+# Build dynamic SAN alt_names from DOMAIN_ARRAY
+ALT_NAMES_BLOCK=""
+DNS_INDEX=1
+for domain in "${DOMAIN_ARRAY[@]}"; do
+    ALT_NAMES_BLOCK="${ALT_NAMES_BLOCK}DNS.${DNS_INDEX} = ${domain}\n"
+    DNS_INDEX=$((DNS_INDEX + 1))
+done
+ALT_NAMES_BLOCK="${ALT_NAMES_BLOCK}DNS.${DNS_INDEX} = localhost\n"
+ALT_NAMES_BLOCK="${ALT_NAMES_BLOCK}IP.1 = 127.0.0.1"
+
 SAN_EXT="${TLS_DIR}/v3_server.ext"
 cat > "${SAN_EXT}" <<EOF
 basicConstraints = critical, CA:FALSE
@@ -319,9 +348,7 @@ authorityKeyIdentifier = keyid, issuer
 subjectAltName = @alt_names
 
 [alt_names]
-DNS.1 = ${CERTSMITH_DOMAIN}
-DNS.2 = localhost
-IP.1 = 127.0.0.1
+$(echo -e "${ALT_NAMES_BLOCK}")
 EOF
 
 # 1. ECC Server Certificate (Signed by CE2)
@@ -339,7 +366,7 @@ generate_ec_key "${ECC_KEY}" "P-256"
 openssl req -new \
     -key "${ECC_KEY}" \
     -out "${ECC_CSR}" \
-    -subj "/C=${CA_COUNTRY}/ST=${CA_STATE}/L=${CA_LOCALITY}/O=${CA_ORGANIZATION}/OU=${CA_ORGANIZATIONAL_UNIT}/CN=${CERTSMITH_DOMAIN}"
+    -subj "/C=${CA_COUNTRY}/ST=${CA_STATE}/L=${CA_LOCALITY}/O=${CA_ORGANIZATION}/OU=${CA_ORGANIZATIONAL_UNIT}/CN=${PRIMARY_DOMAIN}"
 
 openssl x509 -req \
     -in "${ECC_CSR}" \
@@ -372,7 +399,7 @@ generate_rsa_key "${RSA_KEY}" 3072
 openssl req -new \
     -key "${RSA_KEY}" \
     -out "${RSA_CSR}" \
-    -subj "/C=${CA_COUNTRY}/ST=${CA_STATE}/L=${CA_LOCALITY}/O=${CA_ORGANIZATION}/OU=${CA_ORGANIZATIONAL_UNIT}/CN=${CERTSMITH_DOMAIN}"
+    -subj "/C=${CA_COUNTRY}/ST=${CA_STATE}/L=${CA_LOCALITY}/O=${CA_ORGANIZATION}/OU=${CA_ORGANIZATIONAL_UNIT}/CN=${PRIMARY_DOMAIN}"
 
 openssl x509 -req \
     -in "${RSA_CSR}" \

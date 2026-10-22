@@ -73,6 +73,7 @@ Certsmith segregates issuance policies across six dedicated intermediate tiers b
 ## Key Features
 
 - **Offline Key Ceremony**: The Root CA key material is generated outside the operational container using `tools/certsmith-forge.sh`. The root private key can remain air-gapped once intermediate certificates and initial portal certificates are signed.
+- **Multi-Domain & Wildcard SAN Support**: Configure multiple hostnames and wildcard SANs via `CERTSMITH_DOMAINS` (comma-separated). The first domain serves as the primary Subject CN, while all specified domains and wildcards are automatically populated into Nginx `server_name`, step-ca `dnsNames`, and dual-stack portal TLS SANs. Fully backward-compatible with legacy `CERTSMITH_DOMAIN`.
 - **6-Tier ACME Isolation**: Each tier runs an independent `step-ca` process bound to local loopback ports with its own dedicated intermediate key, certificate, and configuration.
 - **Dual-Certificate Reverse Proxy**: Nginx terminates HTTPS using both RSA (4096-bit) and ECC (P-256) certificates simultaneously, negotiating optimal cipher suites dynamically.
 - **Zero-Runtime Trust Portal**: Built with React Router 8 and Tailwind CSS v4, compiled to static HTML via Static Site Generation (SSG) in a multi-stage Docker build. No Node.js runtime or JavaScript server process exists in the runtime container.
@@ -127,7 +128,10 @@ Copy the configuration template:
 cp .env.example .env
 ```
 
-Edit `.env` to define your domain, subject DNs, key lengths, and validity periods. Every variable in `.env` is mandatory.
+Edit `.env` to define your domain(s), subject DNs, key lengths, and validity periods:
+- `CERTSMITH_DOMAINS`: Comma-separated list of domains and wildcard SANs (e.g. `acme.example.com,acme.internal,*.example.com`). The first domain becomes the primary Subject CN.
+- Legacy `CERTSMITH_DOMAIN` is also supported for single-domain setups.
+- Every variable in `.env` is mandatory.
 
 ### 2. Execute Offline Key Ceremony
 
@@ -177,21 +181,24 @@ docker run -d \
 
 ## ACME Endpoints
 
-Once running, Certsmith routes ACME directory requests via path-based reverse proxying:
+Once running, Certsmith routes ACME directory requests via path-based reverse proxying across any configured domain (or your primary domain `<PRIMARY_DOMAIN>`):
 
 | Tier | Directory URL |
 | :--- | :--- |
-| **CR1** (RSA 4096) | `https://<CERTSMITH_DOMAIN>/acme/cr1/directory` |
-| **CR2** (RSA 3072) | `https://<CERTSMITH_DOMAIN>/acme/cr2/directory` |
-| **CR3** (RSA 2048) | `https://<CERTSMITH_DOMAIN>/acme/cr3/directory` |
-| **CE1** (ECDSA P-384) | `https://<CERTSMITH_DOMAIN>/acme/ce1/directory` |
-| **CE2** (ECDSA P-256) | `https://<CERTSMITH_DOMAIN>/acme/ce2/directory` |
-| **CE3** (ECDSA P-521) | `https://<CERTSMITH_DOMAIN>/acme/ce3/directory` |
+| **CR1** (RSA 4096) | `https://<PRIMARY_DOMAIN>/acme/cr1/directory` |
+| **CR2** (RSA 3072) | `https://<PRIMARY_DOMAIN>/acme/cr2/directory` |
+| **CR3** (RSA 2048) | `https://<PRIMARY_DOMAIN>/acme/cr3/directory` |
+| **CE1** (ECDSA P-384) | `https://<PRIMARY_DOMAIN>/acme/ce1/directory` |
+| **CE2** (ECDSA P-256) | `https://<PRIMARY_DOMAIN>/acme/ce2/directory` |
+| **CE3** (ECDSA P-521) | `https://<PRIMARY_DOMAIN>/acme/ce3/directory` |
 
 Public Trust Portal and Certificate Download:
-- Web Portal: `https://<CERTSMITH_DOMAIN>/`
-- Root Certificate: `https://<CERTSMITH_DOMAIN>/root_ca.crt`
-- Health Checks: `https://<CERTSMITH_DOMAIN>/health` and `https://<CERTSMITH_DOMAIN>/healthz`
+- Web Portal: `https://<PRIMARY_DOMAIN>/` (or any configured SAN domain)
+- Root Certificate: `https://<PRIMARY_DOMAIN>/root_ca.crt`
+- Health Checks: `https://<PRIMARY_DOMAIN>/health` and `https://<PRIMARY_DOMAIN>/healthz`
+
+> [!NOTE]
+> All endpoints are simultaneously accessible via any hostname specified in `CERTSMITH_DOMAINS` and matching wildcard SANs.
 
 ---
 

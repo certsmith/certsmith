@@ -31,6 +31,39 @@ require_env() {
 }
 
 # ------------------------------------------
+# Utility: parse_domains
+# ------------------------------------------
+# Parses CERTSMITH_DOMAINS (comma-separated) into:
+#   PRIMARY_DOMAIN     — first domain (used as Subject CN)
+#   CERTSMITH_DOMAINS_ARRAY — bash array of all domains
+#   CERTSMITH_SERVER_NAMES — space-separated (for Nginx server_name)
+CERTSMITH_DOMAINS_ARRAY=()
+PRIMARY_DOMAIN=""
+CERTSMITH_SERVER_NAMES=""
+
+parse_domains() {
+    local raw_domains="${CERTSMITH_DOMAINS:-${CERTSMITH_DOMAIN:-}}"
+    if [ -z "${raw_domains}" ]; then
+        echo "[certsmith] FATAL: Neither CERTSMITH_DOMAINS nor CERTSMITH_DOMAIN is set."
+        exit 1
+    fi
+
+    # Split comma-separated into array
+    IFS=',' read -ra CERTSMITH_DOMAINS_ARRAY <<< "${raw_domains}"
+
+    # Trim whitespace from each element
+    for i in "${!CERTSMITH_DOMAINS_ARRAY[@]}"; do
+        CERTSMITH_DOMAINS_ARRAY[$i]=$(echo "${CERTSMITH_DOMAINS_ARRAY[$i]}" | xargs)
+    done
+
+    PRIMARY_DOMAIN="${CERTSMITH_DOMAINS_ARRAY[0]}"
+    CERTSMITH_SERVER_NAMES="${CERTSMITH_DOMAINS_ARRAY[*]}"
+
+    echo "[certsmith] Primary domain (CN): ${PRIMARY_DOMAIN}"
+    echo "[certsmith] All domains (${#CERTSMITH_DOMAINS_ARRAY[@]}): ${CERTSMITH_SERVER_NAMES}"
+}
+
+# ------------------------------------------
 # Phase 1: Strict .env Validation
 # ------------------------------------------
 validate_env() {
@@ -38,8 +71,12 @@ validate_env() {
     echo "[certsmith] Phase 1: Validating environment variables"
     echo "[certsmith] =========================================="
 
-    # Global
-    require_env CERTSMITH_DOMAIN
+    # Global — backward compatible: accept CERTSMITH_DOMAINS or CERTSMITH_DOMAIN
+    if [ -z "${CERTSMITH_DOMAINS:-}" ] && [ -z "${CERTSMITH_DOMAIN:-}" ]; then
+        echo "[certsmith] FATAL: Required environment variable 'CERTSMITH_DOMAINS' (or 'CERTSMITH_DOMAIN') is missing or empty."
+        echo "[certsmith] All configuration must be provided via .env file. No fallback defaults exist."
+        exit 1
+    fi
     require_env CERTSMITH_PORT_HTTP
     require_env CERTSMITH_PORT_HTTPS
 
@@ -99,6 +136,9 @@ validate_env() {
     require_env CE3_PORT
 
     echo "[certsmith] All environment variables validated successfully."
+
+    # Parse domain list into arrays and primary domain
+    parse_domains
 }
 
 # ------------------------------------------
@@ -171,13 +211,23 @@ generate_step_ca_config() {
         key_json="\"key\": { \"type\": \"EC\", \"curve\": \"${crv}\" }"
     fi
 
+    # Build dynamic dnsNames JSON array from CERTSMITH_DOMAINS_ARRAY
+    local dns_names_json=''
+    for domain in "${CERTSMITH_DOMAINS_ARRAY[@]}"; do
+        if [ -n "${dns_names_json}" ]; then
+            dns_names_json="${dns_names_json}, "
+        fi
+        dns_names_json="${dns_names_json}\"${domain}\""
+    done
+    dns_names_json="${dns_names_json}, \"localhost\", \"127.0.0.1\""
+
     cat > "${ca_config}" <<EOF
 {
     "root": "${CERTSMITH_DATA}/root/root_ca.crt",
     "crt": "${inter_data}/intermediate_ca.crt",
     "key": "${inter_data}/intermediate_ca.key",
     "address": "127.0.0.1:${port}",
-    "dnsNames": ["${CERTSMITH_DOMAIN}", "localhost", "127.0.0.1"],
+    "dnsNames": [${dns_names_json}],
     "logger": {
         "format": "text"
     },
@@ -235,6 +285,16 @@ generate_portal_certs() {
     local san_ext="${tls_dir}/v3_server.ext"
     mkdir -p "${tls_dir}"
 
+    # Build dynamic SAN alt_names from CERTSMITH_DOMAINS_ARRAY
+    local alt_names_block=""
+    local dns_index=1
+    for domain in "${CERTSMITH_DOMAINS_ARRAY[@]}"; do
+        alt_names_block="${alt_names_block}DNS.${dns_index} = ${domain}\n"
+        dns_index=$((dns_index + 1))
+    done
+    alt_names_block="${alt_names_block}DNS.${dns_index} = localhost\n"
+    alt_names_block="${alt_names_block}IP.1 = 127.0.0.1"
+
     cat > "${san_ext}" <<EOF
 basicConstraints = critical, CA:FALSE
 keyUsage = critical, digitalSignature, keyEncipherment
@@ -244,9 +304,7 @@ authorityKeyIdentifier = keyid, issuer
 subjectAltName = @alt_names
 
 [alt_names]
-DNS.1 = ${CERTSMITH_DOMAIN}
-DNS.2 = localhost
-IP.1 = 127.0.0.1
+$(echo -e "${alt_names_block}")
 EOF
 
     # 1. ECC (CE2 P-256)
@@ -263,7 +321,7 @@ EOF
     fi
 
     openssl req -new -key "${ecc_key}" -out "${ecc_csr}" \
-        -subj "/C=${CA_COUNTRY}/ST=${CA_STATE}/L=${CA_LOCALITY}/O=${CA_ORGANIZATION}/OU=${CA_ORGANIZATIONAL_UNIT}/CN=${CERTSMITH_DOMAIN}"
+        -subj "/C=${CA_COUNTRY}/ST=${CA_STATE}/L=${CA_LOCALITY}/O=${CA_ORGANIZATION}/OU=${CA_ORGANIZATIONAL_UNIT}/CN=${PRIMARY_DOMAIN}"
     openssl x509 -req -in "${ecc_csr}" -CA "${ce2_ca_crt}" -CAkey "${ce2_ca_key}" -CAcreateserial \
         -out "${ecc_crt}" -days 730 -extfile "${san_ext}" -sha256
     cat "${ecc_crt}" "${ce2_ca_crt}" > "${ecc_fullchain}"
@@ -284,7 +342,7 @@ EOF
     fi
 
     openssl req -new -key "${rsa_key}" -out "${rsa_csr}" \
-        -subj "/C=${CA_COUNTRY}/ST=${CA_STATE}/L=${CA_LOCALITY}/O=${CA_ORGANIZATION}/OU=${CA_ORGANIZATIONAL_UNIT}/CN=${CERTSMITH_DOMAIN}"
+        -subj "/C=${CA_COUNTRY}/ST=${CA_STATE}/L=${CA_LOCALITY}/O=${CA_ORGANIZATION}/OU=${CA_ORGANIZATIONAL_UNIT}/CN=${PRIMARY_DOMAIN}"
     openssl x509 -req -in "${rsa_csr}" -CA "${cr2_ca_crt}" -CAkey "${cr2_ca_key}" -CAcreateserial \
         -out "${rsa_crt}" -days 730 -extfile "${san_ext}" -sha256
     cat "${rsa_crt}" "${cr2_ca_crt}" > "${rsa_fullchain}"
@@ -369,10 +427,10 @@ generate_nginx_config() {
     export CR1_PORT CE1_PORT
     export CR2_PORT CE2_PORT
     export CR3_PORT CE3_PORT
-    export CERTSMITH_DOMAIN
+    export CERTSMITH_SERVER_NAMES
     export CERTSMITH_DATA
 
-    envsubst '${CR1_PORT} ${CR2_PORT} ${CR3_PORT} ${CE1_PORT} ${CE2_PORT} ${CE3_PORT} ${CERTSMITH_DOMAIN} ${CERTSMITH_DATA}' \
+    envsubst '${CR1_PORT} ${CR2_PORT} ${CR3_PORT} ${CE1_PORT} ${CE2_PORT} ${CE3_PORT} ${CERTSMITH_SERVER_NAMES} ${CERTSMITH_DATA}' \
         < "${template}" > "${output}"
 
     # Copy core nginx.conf
@@ -501,7 +559,8 @@ main() {
             echo ""
             echo "[certsmith] =========================================="
             echo "[certsmith] Certsmith is READY"
-            echo "[certsmith] Domain:  ${CERTSMITH_DOMAIN}"
+            echo "[certsmith] Primary: ${PRIMARY_DOMAIN}"
+            echo "[certsmith] Domains: ${CERTSMITH_SERVER_NAMES}"
             echo "[certsmith] HTTP:    port ${CERTSMITH_PORT_HTTP}"
             echo "[certsmith] HTTPS:   port ${CERTSMITH_PORT_HTTPS}"
             echo "[certsmith] Tiers:   CR1(:${CR1_PORT}) CR2(:${CR2_PORT}) CR3(:${CR3_PORT})"
