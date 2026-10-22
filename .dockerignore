@@ -1,0 +1,50 @@
+# ==========================================
+# .dockerignore — Certsmith
+# ==========================================
+# Prevents sensitive files and unnecessary data
+# from being included in the Docker build context.
+# ==========================================
+
+# Environment secrets (only .env.example is needed)
+.env
+.env.local
+*.env
+!.env.example
+
+# Certificates and private keys
+*.key
+*.pem
+*.crt
+*.cer
+*.der
+*.p12
+*.pfx
+*.srl
+
+# Runtime data
+data/
+secrets/
+certs/
+
+# Version control
+.git/
+.gitignore
+
+# Editor files
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Documentation (not needed in image)
+*.md
+!README.md
+
+# Logs
+*.log
+logs/
+
+# Agents config
+.agents/
