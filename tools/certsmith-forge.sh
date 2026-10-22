@@ -298,6 +298,113 @@ for tier in cr1 cr2 cr3 ce1 ce2 ce3; do
     fi
 done
 
+# ------------------------------------------
+# Phase 4: Portal Dual TLS Certificate Generation
+# ------------------------------------------
+echo ""
+echo "[certsmith-forge] =========================================="
+echo "[certsmith-forge] Phase 4: Portal Dual TLS Certificate Generation"
+echo "[certsmith-forge] =========================================="
+
+TLS_DIR="${DATA_DIR}/tls"
+mkdir -p "${TLS_DIR}"
+
+SAN_EXT="${TLS_DIR}/v3_server.ext"
+cat > "${SAN_EXT}" <<EOF
+basicConstraints = critical, CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth, clientAuth
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid, issuer
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = ${CERTSMITH_DOMAIN}
+DNS.2 = localhost
+IP.1 = 127.0.0.1
+EOF
+
+# 1. ECC Server Certificate (Signed by CE2)
+echo ""
+echo "[certsmith-forge] --- Generating ECC Portal Certificate (CE2 - P-256) ---"
+ECC_KEY="${TLS_DIR}/certsmith-ecc.key"
+ECC_CSR="${TLS_DIR}/certsmith-ecc.csr"
+ECC_CRT="${TLS_DIR}/certsmith-ecc.crt"
+ECC_FULLCHAIN="${TLS_DIR}/certsmith-ecc-fullchain.crt"
+CE2_CA_CRT="${DATA_DIR}/intermediates/ce2/intermediate_ca.crt"
+CE2_CA_KEY="${DATA_DIR}/intermediates/ce2/intermediate_ca.key"
+
+generate_ec_key "${ECC_KEY}" "P-256"
+
+openssl req -new \
+    -key "${ECC_KEY}" \
+    -out "${ECC_CSR}" \
+    -subj "/C=${CA_COUNTRY}/ST=${CA_STATE}/L=${CA_LOCALITY}/O=${CA_ORGANIZATION}/OU=${CA_ORGANIZATIONAL_UNIT}/CN=${CERTSMITH_DOMAIN}"
+
+openssl x509 -req \
+    -in "${ECC_CSR}" \
+    -CA "${CE2_CA_CRT}" \
+    -CAkey "${CE2_CA_KEY}" \
+    -CAcreateserial \
+    -out "${ECC_CRT}" \
+    -days 730 \
+    -extfile "${SAN_EXT}" \
+    -sha256
+
+cat "${ECC_CRT}" "${CE2_CA_CRT}" > "${ECC_FULLCHAIN}"
+rm -f "${ECC_CSR}"
+chmod 644 "${ECC_CRT}" "${ECC_FULLCHAIN}"
+chmod 600 "${ECC_KEY}"
+echo "[certsmith-forge] ✓ ECC Portal Certificate generated and chained."
+
+# 2. RSA Server Certificate (Signed by CR2)
+echo ""
+echo "[certsmith-forge] --- Generating RSA Portal Certificate (CR2 - RSA 3072) ---"
+RSA_KEY="${TLS_DIR}/certsmith-rsa.key"
+RSA_CSR="${TLS_DIR}/certsmith-rsa.csr"
+RSA_CRT="${TLS_DIR}/certsmith-rsa.crt"
+RSA_FULLCHAIN="${TLS_DIR}/certsmith-rsa-fullchain.crt"
+CR2_CA_CRT="${DATA_DIR}/intermediates/cr2/intermediate_ca.crt"
+CR2_CA_KEY="${DATA_DIR}/intermediates/cr2/intermediate_ca.key"
+
+generate_rsa_key "${RSA_KEY}" 3072
+
+openssl req -new \
+    -key "${RSA_KEY}" \
+    -out "${RSA_CSR}" \
+    -subj "/C=${CA_COUNTRY}/ST=${CA_STATE}/L=${CA_LOCALITY}/O=${CA_ORGANIZATION}/OU=${CA_ORGANIZATIONAL_UNIT}/CN=${CERTSMITH_DOMAIN}"
+
+openssl x509 -req \
+    -in "${RSA_CSR}" \
+    -CA "${CR2_CA_CRT}" \
+    -CAkey "${CR2_CA_KEY}" \
+    -CAcreateserial \
+    -out "${RSA_CRT}" \
+    -days 730 \
+    -extfile "${SAN_EXT}" \
+    -sha256
+
+cat "${RSA_CRT}" "${CR2_CA_CRT}" > "${RSA_FULLCHAIN}"
+rm -f "${RSA_CSR}" "${SAN_EXT}"
+chmod 644 "${RSA_CRT}" "${RSA_FULLCHAIN}"
+chmod 600 "${RSA_KEY}"
+echo "[certsmith-forge] ✓ RSA Portal Certificate generated and chained."
+
+# Verify portal certificates
+if openssl verify -CAfile "${ROOT_CRT}" -untrusted "${CE2_CA_CRT}" "${ECC_CRT}" > /dev/null 2>&1; then
+    echo "[certsmith-forge] ✓ Chain verification PASSED for ECC Portal Certificate."
+else
+    echo "[certsmith-forge] ✗ Chain verification FAILED for ECC Portal Certificate!"
+    exit 1
+fi
+
+if openssl verify -CAfile "${ROOT_CRT}" -untrusted "${CR2_CA_CRT}" "${RSA_CRT}" > /dev/null 2>&1; then
+    echo "[certsmith-forge] ✓ Chain verification PASSED for RSA Portal Certificate."
+else
+    echo "[certsmith-forge] ✗ Chain verification FAILED for RSA Portal Certificate!"
+    exit 1
+fi
+
 echo ""
 echo "[certsmith-forge] =========================================="
 echo "[certsmith-forge] Key Ceremony Complete"
@@ -306,6 +413,7 @@ echo ""
 echo "[certsmith-forge] Root CA:        ${ROOT_CRT}"
 echo "[certsmith-forge] Root Key:       ${ROOT_KEY} (SECURE THIS FILE!)"
 echo "[certsmith-forge] Intermediates:  ${DATA_DIR}/intermediates/{cr1,cr2,cr3,ce1,ce2,ce3}/"
+echo "[certsmith-forge] Portal Dual TLS: ${TLS_DIR}/ (ECC + RSA fullchains)"
 echo ""
 echo "[certsmith-forge] IMPORTANT: The Root CA private key (${ROOT_KEY})"
 echo "[certsmith-forge] should be moved to secure offline/air-gapped storage"
