@@ -51,6 +51,7 @@
     "access": "public"
   },
   "scripts": {
+    "certsmith": "node ./bin/certsmith.js",
     "build": "tsup",
     "dev": "tsup --watch",
     "prepublishOnly": "pnpm run build",

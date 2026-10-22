@@ -1,8 +1,12 @@
 {
   "private": true,
   "name": "certsmith-monorepo",
-  "packageManager": "pnpm@11.25.0",
+  "packageManager": "pnpm@12.15.0",
   "scripts": {
-    "certsmith": "pnpm --filter certsmith exec node ./bin/certsmith.js"
+    "certsmith": "pnpm --filter certsmith run certsmith",
+    "start": "pnpm --filter certsmith run start",
+    "build": "pnpm --filter certsmith run build",
+    "dev": "pnpm --filter certsmith run dev",
+    "typecheck": "pnpm --filter certsmith run typecheck"
   }
 }
