@@ -74,13 +74,15 @@ COPY configs/ /etc/certsmith/configs/
 # Trust Portal web assets (Compiled static files from web-builder, zero Node.js runtime)
 COPY --from=web-builder /app/build/client/ /var/www/trust-portal/
 
-# Tools (forge, test)
+# Tools (forge, test) + shared libraries
 COPY tools/ /usr/local/share/certsmith/tools/
-RUN chmod +x /usr/local/share/certsmith/tools/*.sh
+RUN chmod -R +x /usr/local/share/certsmith/tools/
 
-# Container entrypoint
+# Container entrypoint + modular modules
 COPY scripts/entrypoint.sh /usr/local/bin/certsmith-entrypoint
-RUN chmod +x /usr/local/bin/certsmith-entrypoint
+COPY scripts/entrypoint/ /usr/local/bin/entrypoint/
+RUN chmod +x /usr/local/bin/certsmith-entrypoint \
+    && chmod -R +x /usr/local/bin/entrypoint/
 
 # ==========================================
 # Phase 4: Container Metadata & Entrypoint
