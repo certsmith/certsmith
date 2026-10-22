@@ -28,6 +28,7 @@ certs/
 
 # Version control
 .git/
+.github/
 .gitignore
 
 # Editor files
@@ -35,6 +36,7 @@ certs/
 Thumbs.db
 *.swp
 *~
+tmp/
 .idea/
 .vscode/
 

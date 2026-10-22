@@ -24,6 +24,7 @@ apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     nginx-light \
+    libnginx-mod-http-headers-more-filter \
     libcap2-bin \
     gettext-base \
     procps
