@@ -16,7 +16,26 @@
 #     -v certsmith-data:/data \
 #     certsmith:latest
 # ==========================================
+# Phase 0: Build Web UI (Node 24 Alpine)
+# ==========================================
+FROM node:24-alpine AS web-builder
 
+WORKDIR /app
+
+# Enable modern pnpm via Corepack
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Layer caching for dependencies
+COPY web/package.json web/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+# Copy source and compile SSG static export
+COPY web/ ./
+RUN pnpm build
+
+# ==========================================
+# Phase 1: Base Runtime Environment
+# ==========================================
 FROM debian:trixie-slim
 
 # Pinned step-ca version (audited)
@@ -29,7 +48,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR ${CERTSMITH_HOME}
 
-# ---- Phase 1: Install via modular scripts ----
+# ==========================================
+# Phase 2: Install via Modular Scripts
+# ==========================================
 # Copy build scripts to /tmp, execute in order, then clean up
 COPY scripts/01-install-deps.sh \
      scripts/02-install-step-ca.sh \
@@ -44,12 +65,14 @@ RUN chmod +x /tmp/scripts/*.sh && \
     /tmp/scripts/04-cleanup.sh && \
     rm -rf /tmp/scripts
 
-# ---- Phase 2: Copy application files ----
+# ==========================================
+# Phase 3: Copy Application Files
+# ==========================================
 # Nginx configuration templates
 COPY configs/ /etc/certsmith/configs/
 
-# Trust Portal web assets
-COPY web/ /var/www/trust-portal/
+# Trust Portal web assets (Compiled static files from web-builder, zero Node.js runtime)
+COPY --from=web-builder /app/build/client/ /var/www/trust-portal/
 
 # Tools (forge, test)
 COPY tools/ /usr/local/share/certsmith/tools/
@@ -59,7 +82,9 @@ RUN chmod +x /usr/local/share/certsmith/tools/*.sh
 COPY scripts/entrypoint.sh /usr/local/bin/certsmith-entrypoint
 RUN chmod +x /usr/local/bin/certsmith-entrypoint
 
-# ---- Phase 3: Container metadata ----
+# ==========================================
+# Phase 4: Container Metadata & Entrypoint
+# ==========================================
 EXPOSE 80 443
 
 # Persistent volume for Root CA, intermediates, step-ca DB

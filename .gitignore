@@ -32,3 +32,13 @@ Thumbs.db
 tmp/
 .idea/
 .vscode/
+
+# Frontend & Node artifacts
+node_modules/
+**/node_modules/
+.react-router/
+**/.react-router/
+build/
+**/build/
+*.tsbuildinfo
+

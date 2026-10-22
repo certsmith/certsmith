@@ -50,3 +50,12 @@ logs/
 
 # Agents config
 .agents/
+
+# Node / Frontend Build artifacts
+node_modules/
+**/node_modules/
+build/
+**/build/
+.react-router/
+**/.react-router/
+*.tsbuildinfo

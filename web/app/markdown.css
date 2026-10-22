@@ -1,0 +1,47 @@
+/* app/markdown.css */
+@import "./typeset.css";
+
+.typeset-notes {
+  --typeset-font-body: var(--font-inter);
+  --typeset-font-heading: var(--font-geist);
+  --typeset-font-mono: var(--font-jetbrains-mono);
+  --typeset-size: 15px;
+  --typeset-leading: 1.75;
+  --typeset-flow: 1.25em;
+}
+
+/* Extra polishing for markdown articles */
+.typeset-notes h1 {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.typeset-notes h2 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.35rem;
+  margin-top: 2rem;
+}
+
+.typeset-notes h3 {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin-top: 1.5rem;
+}
+
+.typeset-notes kbd {
+  font-family: var(--font-jetbrains-mono);
+  font-size: 0.85em;
+  background-color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 0.15em 0.35em;
+  color: var(--color-foreground);
+}
+
+.typeset-notes hr {
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  margin: 2rem 0;
+}
