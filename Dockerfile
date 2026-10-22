@@ -25,8 +25,8 @@ WORKDIR /app
 # Enable modern pnpm via Corepack
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Layer caching for dependencies
-COPY web/package.json web/pnpm-lock.yaml ./
+# Layer caching for dependencies (isolated Docker layer, zero shared host directory)
+COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml web/.npmrc ./
 RUN pnpm install --frozen-lockfile
 
 # Copy source and compile SSG static export
