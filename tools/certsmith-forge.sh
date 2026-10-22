@@ -104,6 +104,13 @@ PRIMARY_DOMAIN="${DOMAIN_ARRAY[0]}"
 echo "[certsmith-forge] Primary domain (CN): ${PRIMARY_DOMAIN}"
 echo "[certsmith-forge] All domains (${#DOMAIN_ARRAY[@]}): ${DOMAIN_ARRAY[*]}"
 
+# Strip quotes from Subject DN variables for OpenSSL compatibility
+CA_COUNTRY="${CA_COUNTRY//\"/}"
+CA_STATE="${CA_STATE//\"/}"
+CA_LOCALITY="${CA_LOCALITY//\"/}"
+CA_ORGANIZATION="${CA_ORGANIZATION//\"/}"
+CA_ORGANIZATIONAL_UNIT="${CA_ORGANIZATIONAL_UNIT//\"/}"
+
 # ------------------------------------------
 # Helper: Build Subject DN
 # ------------------------------------------

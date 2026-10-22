@@ -135,6 +135,13 @@ validate_env() {
     require_env CE3_VALIDITY_YEARS
     require_env CE3_PORT
 
+    # Strip quotes from Subject DN variables for OpenSSL compatibility
+    CA_COUNTRY="${CA_COUNTRY//\"/}"
+    CA_STATE="${CA_STATE//\"/}"
+    CA_LOCALITY="${CA_LOCALITY//\"/}"
+    CA_ORGANIZATION="${CA_ORGANIZATION//\"/}"
+    CA_ORGANIZATIONAL_UNIT="${CA_ORGANIZATIONAL_UNIT//\"/}"
+
     echo "[certsmith] All environment variables validated successfully."
 
     # Parse domain list into arrays and primary domain
