@@ -1,0 +1,75 @@
+{
+  "name": "certsmith",
+  "version": "1.0.0",
+  "description": "Unified CLI Hub for Certsmith - Cloudflare SaaS, step-ca, Docker, and PKI Management",
+  "author": "Certsmith Authors (dyzulk)",
+  "license": "MIT",
+  "homepage": "https://github.com/certsmith/certsmith#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/certsmith/certsmith.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/certsmith/certsmith/issues"
+  },
+  "keywords": [
+    "certsmith",
+    "pki",
+    "step-ca",
+    "cloudflare",
+    "zero-trust",
+    "cloudflared",
+    "docker",
+    "tls",
+    "ssl",
+    "ca",
+    "cli"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "bin": {
+    "certsmith": "./bin/certsmith.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "prepublishOnly": "pnpm run build",
+    "start": "node ./dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.10.1",
+    "cloudflare": "^7.3.0",
+    "commander": "^13.1.0",
+    "dotenv": "^16.6.1",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "tsup": "^9.0.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -40,5 +40,7 @@ node_modules/
 **/.react-router/
 build/
 **/build/
+dist/
+**/dist/
 *.tsbuildinfo
 
