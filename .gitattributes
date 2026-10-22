@@ -1,0 +1,14 @@
+# Set default line endings to LF
+* text=auto eol=lf
+*.sh text eol=lf
+
+# Exclude repository management and CI/CD files from release zip exports
+.gitattributes export-ignore
+.gitignore export-ignore
+.dockerignore export-ignore
+.github export-ignore
+.agents export-ignore
+tmp export-ignore
+data export-ignore
+web/.prettierignore export-ignore
+web/.prettierrc export-ignore

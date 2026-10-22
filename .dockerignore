@@ -30,6 +30,7 @@ certs/
 .git/
 .github/
 .gitignore
+.gitattributes
 
 # Editor files
 .DS_Store
