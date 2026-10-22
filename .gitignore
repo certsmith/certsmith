@@ -1,0 +1,33 @@
+# Environment configuration (never commit secrets)
+.env
+.env.local
+*.env
+!.env.example
+
+# Certificates, private keys, and keystores
+*.key
+*.pem
+*.crt
+*.cer
+*.der
+*.p12
+*.pfx
+*.srl
+
+# Step-CA runtime data and secrets
+data/
+secrets/
+certs/
+step-ca/
+
+# Logs
+*.log
+logs/
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
