@@ -120,6 +120,10 @@ function generateLocalFallbackHumanNotes(version, previousTag) {
   return md;
 }
 
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function callGeminiApi(prompt, apiKey) {
   const candidateModels = [
     "gemini-flash-latest",
@@ -128,40 +132,55 @@ async function callGeminiApi(prompt, apiKey) {
     "gemini-3.6-flash",
     "gemini-3.5-flash",
   ];
+  const maxRetriesPerModel = 3;
   let lastError = null;
 
   for (const model of candidateModels) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    try {
-      console.log(`[release-notes] Attempting generation with model: ${model}...`);
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 2500,
-          },
-        }),
-      });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.warn(`[release-notes] Model ${model} returned HTTP ${response.status}. Trying next fallback...`);
-        lastError = new Error(`API HTTP ${response.status} (${model}): ${errorText}`);
-        continue;
-      }
+    for (let attempt = 1; attempt <= maxRetriesPerModel; attempt++) {
+      try {
+        console.log(`[release-notes] Model ${model} (attempt ${attempt}/${maxRetriesPerModel})...`);
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.2,
+              maxOutputTokens: 2500,
+            },
+          }),
+        });
 
-      const data = await response.json();
-      const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (content) {
-        console.log(`[release-notes] Successfully generated release notes with ${model}.`);
-        return sanitizeNoEmoji(content);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.warn(`[release-notes] ${model} attempt ${attempt} returned HTTP ${response.status}.`);
+          lastError = new Error(`API HTTP ${response.status} (${model}): ${errorText}`);
+
+          if (attempt < maxRetriesPerModel) {
+            console.log(`[release-notes] Retrying ${model} in ${attempt * 1000}ms...`);
+            await delay(attempt * 1000);
+            continue;
+          } else {
+            console.warn(`[release-notes] All ${maxRetriesPerModel} attempts failed for ${model}. Moving to next model...`);
+            break;
+          }
+        }
+
+        const data = await response.json();
+        const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (content) {
+          console.log(`[release-notes] Successfully generated release notes with ${model}.`);
+          return sanitizeNoEmoji(content);
+        }
+      } catch (err) {
+        console.warn(`[release-notes] ${model} attempt ${attempt} network error (${err.message}).`);
+        lastError = err;
+        if (attempt < maxRetriesPerModel) {
+          await delay(attempt * 1000);
+        }
       }
-    } catch (err) {
-      console.warn(`[release-notes] Model ${model} request failed (${err.message}). Trying next fallback...`);
-      lastError = err;
     }
   }
 
