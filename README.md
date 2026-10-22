@@ -106,9 +106,22 @@ certsmith/
 │   ├── 02-install-step-ca.sh # step-ca binary installation
 │   ├── 03-setup-user.sh      # System user and privilege isolation
 │   ├── 04-cleanup.sh         # Image layer minimization
-│   └── entrypoint.sh         # Fail-fast env audit, template expansion, daemon supervisor
+│   ├── entrypoint.sh         # Modular runtime orchestrator
+│   └── entrypoint/           # Modular runtime routines
+│       ├── 00-utils.sh       # Shared helpers, env parsing, cert generators
+│       ├── 01-validate-env.sh# Fail-fast environment variable auditing
+│       ├── 02-generate-step-ca.sh # step-ca config & password generation
+│       ├── 03-portal-tls.sh  # Dynamic portal TLS generation with SAN audit
+│       ├── 04-generate-nginx.sh   # Nginx template expansion
+│       └── 05-supervise.sh   # Multi-process supervisor (step-ca + Nginx)
 ├── tools/
-│   ├── certsmith-forge.sh    # Offline PKI generation script (Root CA + 6 Intermediates)
+│   ├── certsmith-forge.sh    # Modular offline PKI orchestrator
+│   ├── lib/                  # Offline ceremony modules
+│   │   ├── common.sh         # Shared forge utilities, colors, validations
+│   │   ├── forge-root.sh     # Offline Root CA generation
+│   │   ├── forge-intermediates.sh # 6-tier Intermediate CA generation
+│   │   ├── forge-portal-tls.sh # Dual-stack portal TLS generation
+│   │   └── forge-verify.sh   # OpenSSL certificate chain verification
 │   └── test-issuance.sh      # ACME end-to-end issuance validation script
 └── web/                      # Trust Portal source (React Router 8, Tailwind v4, Shadcn)
     ├── app/
@@ -260,6 +273,85 @@ Container logs can be monitored with:
 
 ```bash
 docker logs -f certsmith
+```
+
+---
+
+## Standalone Deployment & Migration Guide
+
+Certsmith is deliberately designed to run as a **standalone container without Docker Compose**, maximizing portability across Proxmox LXC, Docker hosts, VMs, and bare-metal environments.
+
+### 1. Target Directory & Working Convention
+Recommended deployment directory on the target host: `/opt/certsmith`
+
+```bash
+ssh user@target-host "mkdir -p /opt/certsmith/data"
+```
+
+### 2. Configuration Preparation (Local Edit, Remote Transfer)
+Always prepare your production `.env` locally before copying to the remote target host:
+
+```bash
+# 1. Prepare .env locally with target domains (including internal homelab FQDNs and wildcards)
+# e.g. CERTSMITH_DOMAINS=acme.internal.lan,*.internal.lan,*.example.com
+
+# 2. Securely transfer to target host
+scp .env user@target-host:/opt/certsmith/.env
+ssh user@target-host "chmod 600 /opt/certsmith/.env"
+```
+
+### 3. Preserving PKI Materials (`data/`) During Migration
+To migrate an active instance or staged CA ceremony without regenerating keys or breaking existing client trusts:
+
+```bash
+# Stop local container to flush state
+docker stop certsmith
+
+# Sync PKI data preserving permissions and timestamps
+rsync -avzP data/ user@target-host:/opt/certsmith/data/
+ssh user@target-host "chmod -R 700 /opt/certsmith/data/root /opt/certsmith/data/intermediates 2>/dev/null || true"
+```
+
+> [!TIP]
+> **Zero-Downtime TLS Re-issuance**: When migrating to new hostnames or IP addresses, the Certsmith container automatically detects changes in `CERTSMITH_DOMAINS` upon startup, dynamically re-issuing portal TLS certificates signed by your existing Intermediate CAs without touching or invalidating the Root CA.
+
+### 4. Image Deployment & Standalone Container Launch
+
+You can run the container using pre-built images from GitHub Container Registry or by transferring a locally built image:
+
+#### Option A: Run from GitHub Container Registry (GHCR)
+```bash
+ssh user@target-host "docker run -d \
+  --name certsmith \
+  --restart unless-stopped \
+  -p 80:80 \
+  -p 443:443 \
+  --env-file /opt/certsmith/.env \
+  -v /opt/certsmith/data:/data \
+  ghcr.io/certsmith/certsmith:latest"
+```
+
+#### Option B: Direct Docker Image Streaming (Offline / Direct SSH)
+```bash
+docker save certsmith:latest | ssh user@target-host "docker load"
+ssh user@target-host "docker run -d \
+  --name certsmith \
+  --restart unless-stopped \
+  -p 80:80 \
+  -p 443:443 \
+  --env-file /opt/certsmith/.env \
+  -v /opt/certsmith/data:/data \
+  certsmith:latest"
+```
+
+### 5. Verification on Target Host
+```bash
+# Verify container startup and daemon status
+ssh user@target-host "docker logs certsmith"
+
+# Verify TLS portal and ACME directory
+curl -k -I https://<TARGET_HOST_OR_IP>/health
+curl -k -s https://<TARGET_HOST_OR_IP>/acme/cr1/directory | jq .
 ```
 
 ---
