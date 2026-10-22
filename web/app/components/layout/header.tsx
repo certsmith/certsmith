@@ -13,18 +13,25 @@ export function Header() {
   const isGuides = location.pathname.startsWith("/guides")
 
   return (
-    <header className="border-b border-border/80 bg-card/60 backdrop-blur-md sticky top-0 z-40">
-      <div className="container mx-auto px-4 lg:px-8 h-16 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-40 border-b border-border/80 bg-card/60 backdrop-blur-md">
+      <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4 lg:px-8">
         {/* Brand */}
-        <Link to="/" className="flex items-center gap-3 group focus:outline-none">
-          <div className="size-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center p-1.5 transition-colors group-hover:bg-primary/20">
-            <img src="/logo.svg" alt="Certsmith" className="size-full object-contain" />
+        <Link
+          to="/"
+          className="group flex items-center gap-3 focus:outline-none"
+        >
+          <div className="flex size-10 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 p-1.5 transition-colors group-hover:bg-primary/20">
+            <img
+              src="/logo.svg"
+              alt="Certsmith"
+              className="size-full object-contain"
+            />
           </div>
           <div className="flex flex-col">
-            <span className="font-heading font-bold text-lg leading-tight tracking-tight text-foreground flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5 font-heading text-lg leading-tight font-bold tracking-tight text-foreground">
               Certsmith
             </span>
-            <span className="text-xs text-muted-foreground font-medium hidden sm:inline">
+            <span className="hidden text-xs font-medium text-muted-foreground sm:inline">
               Private ACME Certificate Authority
             </span>
           </div>
@@ -61,7 +68,7 @@ export function Header() {
             asChild
             variant="default"
             size="sm"
-            className="gap-2 shadow-xs hidden sm:inline-flex"
+            className="hidden gap-2 shadow-xs sm:inline-flex"
           >
             <a href="/root_ca.crt" download="root_ca.crt" id="download-root-ca">
               <Download className="size-4" />
@@ -83,7 +90,7 @@ export function Header() {
             ) : (
               <Moon className="size-4 text-sky-500" />
             )}
-            <Kbd className="hidden md:inline-flex text-[10px] px-1 py-0">d</Kbd>
+            <Kbd className="hidden px-1 py-0 text-[10px] md:inline-flex">d</Kbd>
           </Button>
         </div>
       </div>

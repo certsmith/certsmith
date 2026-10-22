@@ -9,7 +9,11 @@ import {
 import { useHighlightedCode } from "~/hooks/use-highlighted-code"
 import { CodeBlockLine } from "~/components/ui/code-block"
 import type { TierInfo } from "~/lib/tiers"
-import { buildAcmeUrl, buildCertbotCommand, buildCurlCommand } from "~/lib/tiers"
+import {
+  buildAcmeUrl,
+  buildCertbotCommand,
+  buildCurlCommand,
+} from "~/lib/tiers"
 
 import * as React from "react"
 
@@ -55,7 +59,10 @@ export function QuickStart({ activeTier, origin }: QuickStartProps) {
     }
   }, [origin])
 
-  const baseUrl = origin || clientOrigin || (typeof window !== "undefined" ? window.location.origin : "")
+  const baseUrl =
+    origin ||
+    clientOrigin ||
+    (typeof window !== "undefined" ? window.location.origin : "")
 
   if (!activeTier) {
     return (
@@ -64,7 +71,7 @@ export function QuickStart({ activeTier, origin }: QuickStartProps) {
           <h2 className="font-heading text-xl font-semibold tracking-tight">
             Quick Start
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="mt-1 text-sm text-muted-foreground">
             Select a tier above to generate the command.
           </p>
         </div>
@@ -108,7 +115,7 @@ export function QuickStart({ activeTier, origin }: QuickStartProps) {
         <h2 className="font-heading text-xl font-semibold tracking-tight">
           Quick Start
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="mt-1 text-sm text-muted-foreground">
           Commands for{" "}
           <span className="font-semibold text-foreground">
             {activeTier.name}

@@ -25,7 +25,7 @@ export function TierCard({ tier, isActive, onClick }: TierCardProps) {
         "cursor-pointer transition-all duration-200 hover:shadow-md",
         "hover:border-primary/40",
         isActive &&
-          "ring-2 ring-primary/60 border-primary/50 shadow-md shadow-primary/5 bg-primary/[0.02]"
+          "border-primary/50 bg-primary/[0.02] shadow-md ring-2 shadow-primary/5 ring-primary/60"
       )}
       onClick={onClick}
       role="button"
@@ -40,13 +40,13 @@ export function TierCard({ tier, isActive, onClick }: TierCardProps) {
     >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base font-heading font-semibold tracking-tight">
+          <CardTitle className="font-heading text-base font-semibold tracking-tight">
             {tier.name}
           </CardTitle>
           <Badge
             variant={isActive ? "default" : "secondary"}
             className={cn(
-              "text-[10px] font-bold tracking-wider uppercase px-2 py-0.5",
+              "px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase",
               !isActive &&
                 (isRsa
                   ? "text-sky-600 dark:text-sky-400"

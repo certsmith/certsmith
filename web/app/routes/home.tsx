@@ -28,24 +28,26 @@ export default function HomePage() {
   )
 
   return (
-    <div className="container mx-auto px-4 lg:px-8 py-8 md:py-12 max-w-6xl space-y-10">
+    <div className="container mx-auto max-w-6xl space-y-10 px-4 py-8 md:py-12 lg:px-8">
       {/* Real-time Health Status */}
       <StatusBanner />
 
       {/* Hero Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
-        <div className="space-y-3 max-w-2xl">
+      <div className="flex flex-col justify-between gap-6 pb-2 md:flex-row md:items-end">
+        <div className="max-w-2xl space-y-3">
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="gap-1.5 py-1 px-2.5">
+            <Badge variant="outline" className="gap-1.5 px-2.5 py-1">
               <Sparkles className="size-3.5 text-primary" />
               <span>Internal PKI Infrastructure</span>
             </Badge>
           </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-extrabold tracking-tight text-foreground">
+          <h1 className="font-heading text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
             Certificate Authority Trust Portal
           </h1>
-          <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
-            Select a certificate tier to generate automated ACME issuance commands, or download the Root CA certificate to establish system-wide trust.
+          <p className="text-base leading-relaxed text-muted-foreground sm:text-lg">
+            Select a certificate tier to generate automated ACME issuance
+            commands, or download the Root CA certificate to establish
+            system-wide trust.
           </p>
         </div>
 
@@ -72,26 +74,30 @@ export default function HomePage() {
       {/* CA Tiers Grid */}
       <section className="space-y-8">
         <div>
-          <h2 className="text-2xl font-heading font-bold tracking-tight text-foreground flex items-center gap-2">
+          <h2 className="flex items-center gap-2 font-heading text-2xl font-bold tracking-tight text-foreground">
             <Shield className="size-5 text-primary" />
             <span>Certificate Tiers</span>
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Choose between ECDSA curves for modern, high-speed performance or RSA keys for broad legacy compatibility.
+          <p className="mt-1 text-sm text-muted-foreground">
+            Choose between ECDSA curves for modern, high-speed performance or
+            RSA keys for broad legacy compatibility.
           </p>
         </div>
 
         {/* ECC Tiers */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            <h3 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
               ECC Family (Elliptic Curve Cryptography)
             </h3>
-            <Badge variant="secondary" className="text-[10px] uppercase font-mono">
+            <Badge
+              variant="secondary"
+              className="font-mono text-[10px] uppercase"
+            >
               Recommended
             </Badge>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
             {ECC_TIERS.map((tier) => (
               <TierCard
                 key={tier.id}
@@ -105,10 +111,10 @@ export default function HomePage() {
 
         {/* RSA Tiers */}
         <div className="space-y-3 pt-2">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          <h3 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
             RSA Family (Rivest–Shamir–Adleman)
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
             {RSA_TIERS.map((tier) => (
               <TierCard
                 key={tier.id}

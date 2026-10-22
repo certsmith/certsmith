@@ -21,7 +21,7 @@ export default function GuidesIndexPage() {
   if (!defaultGuide) return null
 
   return (
-    <div className="rounded-xl border border-border bg-card p-6 sm:p-10 shadow-xs">
+    <div className="rounded-xl border border-border bg-card p-6 shadow-xs sm:p-10">
       <GuideViewer content={defaultGuide.content} origin={origin} />
     </div>
   )

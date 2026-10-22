@@ -26,36 +26,41 @@ export function ErrorView({ error }: ErrorViewProps) {
     : "Application Error"
 
   const errorMessage = isRouteErrorResponse(error)
-    ? error.data?.message || "The requested resource could not be found or processed."
+    ? error.data?.message ||
+      "The requested resource could not be found or processed."
     : error instanceof Error
-    ? error.message
-    : "An unexpected client-side exception occurred."
+      ? error.message
+      : "An unexpected client-side exception occurred."
 
   const stack = error instanceof Error ? error.stack : undefined
 
   return (
-    <div className="container mx-auto px-4 py-16 sm:py-24 max-w-3xl">
-      <div className="rounded-2xl border border-border/80 bg-card/60 backdrop-blur-xs p-8 sm:p-12 shadow-lg space-y-8 text-center sm:text-left">
+    <div className="container mx-auto max-w-3xl px-4 py-16 sm:py-24">
+      <div className="space-y-8 rounded-2xl border border-border/80 bg-card/60 p-8 text-center shadow-lg backdrop-blur-xs sm:p-12 sm:text-left">
         {/* Header with Icon and Badge */}
-        <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 border-b border-border/60 pb-6">
+        <div className="flex flex-col items-center justify-between gap-4 border-b border-border/60 pb-6 sm:flex-row sm:items-start">
           <div className="flex items-center gap-3">
             <div
-              className={`size-12 rounded-xl flex items-center justify-center ${
+              className={`flex size-12 items-center justify-center rounded-xl ${
                 is404
-                  ? "bg-primary/10 border border-primary/20 text-primary"
-                  : "bg-destructive/10 border border-destructive/20 text-destructive"
+                  ? "border border-primary/20 bg-primary/10 text-primary"
+                  : "border border-destructive/20 bg-destructive/10 text-destructive"
               }`}
             >
-              {is404 ? <FileQuestion className="size-6" /> : <AlertTriangle className="size-6" />}
+              {is404 ? (
+                <FileQuestion className="size-6" />
+              ) : (
+                <AlertTriangle className="size-6" />
+              )}
             </div>
             <div>
               <Badge
                 variant={is404 ? "outline" : "destructive"}
-                className="font-mono text-xs uppercase px-2 py-0.5"
+                className="px-2 py-0.5 font-mono text-xs uppercase"
               >
                 {statusText}
               </Badge>
-              <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground mt-1">
+              <h1 className="mt-1 font-heading text-2xl font-bold text-foreground sm:text-3xl">
                 {is404 ? "Page Not Found" : "Something Went Wrong"}
               </h1>
             </div>
@@ -66,7 +71,7 @@ export function ErrorView({ error }: ErrorViewProps) {
               onClick={() => window.location.reload()}
               variant="outline"
               size="sm"
-              className="gap-2 shrink-0"
+              className="shrink-0 gap-2"
             >
               <RefreshCw className="size-3.5" />
               <span>Reload Page</span>
@@ -76,7 +81,7 @@ export function ErrorView({ error }: ErrorViewProps) {
 
         {/* Message description */}
         <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
-          <p className="text-base text-foreground font-medium">
+          <p className="text-base font-medium text-foreground">
             {is404
               ? "The URL you requested does not match any route in the Trust Portal. It may have moved or been typed incorrectly."
               : errorMessage}
@@ -91,49 +96,65 @@ export function ErrorView({ error }: ErrorViewProps) {
 
         {/* Quick Links Grid for 404 */}
         {is404 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2">
             <Link
               to="/"
-              className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+              className="flex items-center gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              <Home className="size-4 text-primary shrink-0" />
+              <Home className="size-4 shrink-0 text-primary" />
               <div>
-                <div className="font-semibold text-xs text-foreground">Trust Portal Home</div>
-                <div className="text-[11px] text-muted-foreground">Select tiers & issue certificates</div>
+                <div className="text-xs font-semibold text-foreground">
+                  Trust Portal Home
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  Select tiers & issue certificates
+                </div>
               </div>
             </Link>
 
             <Link
               to="/guides/root-ca"
-              className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+              className="flex items-center gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              <BookOpen className="size-4 text-primary shrink-0" />
+              <BookOpen className="size-4 shrink-0 text-primary" />
               <div>
-                <div className="font-semibold text-xs text-foreground">Root CA Installation</div>
-                <div className="text-[11px] text-muted-foreground">OS & browser trust setup guides</div>
+                <div className="text-xs font-semibold text-foreground">
+                  Root CA Installation
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  OS & browser trust setup guides
+                </div>
               </div>
             </Link>
 
             <Link
               to="/guides/acme-clients"
-              className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+              className="flex items-center gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              <Terminal className="size-4 text-primary shrink-0" />
+              <Terminal className="size-4 shrink-0 text-primary" />
               <div>
-                <div className="font-semibold text-xs text-foreground">ACME Clients</div>
-                <div className="text-[11px] text-muted-foreground">Certbot, Lego, Caddy configs</div>
+                <div className="text-xs font-semibold text-foreground">
+                  ACME Clients
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  Certbot, Lego, Caddy configs
+                </div>
               </div>
             </Link>
 
             <a
               href="/root_ca.crt"
               download="root_ca.crt"
-              className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+              className="flex items-center gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              <Download className="size-4 text-primary shrink-0" />
+              <Download className="size-4 shrink-0 text-primary" />
               <div>
-                <div className="font-semibold text-xs text-foreground">Download Root CA</div>
-                <div className="text-[11px] text-muted-foreground">Get the public .crt certificate</div>
+                <div className="text-xs font-semibold text-foreground">
+                  Download Root CA
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  Get the public .crt certificate
+                </div>
               </div>
             </a>
           </div>
@@ -141,10 +162,10 @@ export function ErrorView({ error }: ErrorViewProps) {
 
         {/* Optional Stack Trace disclosure (for non-404 in dev) */}
         {!is404 && stack && (
-          <div className="border border-border/60 rounded-lg overflow-hidden">
+          <div className="overflow-hidden rounded-lg border border-border/60">
             <button
               onClick={() => setShowStack(!showStack)}
-              className="w-full flex items-center justify-between p-3 text-xs font-mono text-muted-foreground hover:bg-muted/50 transition-colors"
+              className="flex w-full items-center justify-between p-3 font-mono text-xs text-muted-foreground transition-colors hover:bg-muted/50"
             >
               <span>Error Stack Trace</span>
               <ChevronDown
@@ -152,7 +173,7 @@ export function ErrorView({ error }: ErrorViewProps) {
               />
             </button>
             {showStack && (
-              <pre className="p-4 bg-muted/70 text-left overflow-x-auto text-[11px] font-mono border-t border-border/60 leading-relaxed max-h-64">
+              <pre className="max-h-64 overflow-x-auto border-t border-border/60 bg-muted/70 p-4 text-left font-mono text-[11px] leading-relaxed">
                 <code>{stack}</code>
               </pre>
             )}
@@ -160,7 +181,7 @@ export function ErrorView({ error }: ErrorViewProps) {
         )}
 
         {/* Action Buttons */}
-        <div className="pt-2 flex flex-wrap items-center justify-center sm:justify-start gap-3 border-t border-border/60">
+        <div className="flex flex-wrap items-center justify-center gap-3 border-t border-border/60 pt-2 sm:justify-start">
           <Button asChild variant="default" className="gap-2">
             <Link to="/">
               <Home className="size-4" />

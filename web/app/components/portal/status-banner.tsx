@@ -12,19 +12,22 @@ const statusConfig = {
   operational: {
     icon: Activity,
     iconClass: "text-emerald-500",
-    bgClass: "bg-emerald-500/5 border-emerald-500/20 dark:bg-emerald-500/10 dark:border-emerald-500/25",
+    bgClass:
+      "bg-emerald-500/5 border-emerald-500/20 dark:bg-emerald-500/10 dark:border-emerald-500/25",
     dotClass: "bg-emerald-500 animate-pulse",
   },
   degraded: {
     icon: AlertTriangle,
     iconClass: "text-amber-500",
-    bgClass: "bg-amber-500/5 border-amber-500/20 dark:bg-amber-500/10 dark:border-amber-500/25",
+    bgClass:
+      "bg-amber-500/5 border-amber-500/20 dark:bg-amber-500/10 dark:border-amber-500/25",
     dotClass: "bg-amber-500 animate-pulse",
   },
   offline: {
     icon: WifiOff,
     iconClass: "text-red-500",
-    bgClass: "bg-red-500/5 border-red-500/20 dark:bg-red-500/10 dark:border-red-500/25",
+    bgClass:
+      "bg-red-500/5 border-red-500/20 dark:bg-red-500/10 dark:border-red-500/25",
     dotClass: "bg-red-500",
   },
 } as const
@@ -51,7 +54,10 @@ export function StatusBanner() {
           )}
         />
         <span
-          className={cn("relative inline-flex size-2.5 rounded-full", config.dotClass)}
+          className={cn(
+            "relative inline-flex size-2.5 rounded-full",
+            config.dotClass
+          )}
         />
       </span>
       <Icon className={cn("size-4 shrink-0", config.iconClass)} />
