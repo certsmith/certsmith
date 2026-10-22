@@ -1,0 +1,125 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (e.g. v1.0.0)"
+        required: true
+        default: "v1.0.0"
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    name: Validate Code & Build Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable Corepack & pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+
+      - name: Install Web Dependencies
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck Trust Portal
+        working-directory: web
+        run: pnpm typecheck
+
+      - name: Dry-Run Web Static Build
+        working-directory: web
+        run: pnpm build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate Dockerfile Build Syntax
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: web-builder
+          push: false
+          load: false
+
+  generate-notes:
+    name: Generate AI Release Notes
+    needs: validate
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.resolve_tag.outputs.tag }}
+    steps:
+      - name: Checkout Complete History
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Resolve Release Tag
+        id: resolve_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Release Notes
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          VERSION: ${{ steps.resolve_tag.outputs.tag }}
+          OUTPUT_PATH: release-notes.md
+          PROMPT_TEMPLATE: .github/prompts/release-notes-prompt.md
+        run: |
+          node scripts/generate-release-notes.mjs "${VERSION}" "${OUTPUT_PATH}"
+
+      - name: Upload Release Notes Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes.md
+          retention-days: 1
+
+  create-release:
+    name: Publish GitHub Release
+    needs: generate-notes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Download Release Notes
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.generate-notes.outputs.release_tag }}
+        run: |
+          gh release create "${TAG}" \
+            --title "Certsmith ${TAG}" \
+            --notes-file release-notes.md \
+            --verify-tag || \
+          gh release create "${TAG}" \
+            --title "Certsmith ${TAG}" \
+            --notes-file release-notes.md
