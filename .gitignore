@@ -29,5 +29,6 @@ logs/
 Thumbs.db
 *.swp
 *~
+tmp/
 .idea/
 .vscode/
