@@ -17,6 +17,7 @@ export default {
     // When SSR is disabled (SSG mode), prerender all routes to static HTML files
     return [
       "/",
+      "/error",
       "/guides",
       "/guides/root-ca",
       "/guides/acme-clients",

@@ -10,6 +10,7 @@ import {
 import type { Route } from "./+types/root"
 import { Header } from "~/components/layout/header"
 import { Footer } from "~/components/layout/footer"
+import { ErrorView } from "~/components/layout/error-view"
 import "./app.css"
 
 export function links() {
@@ -50,30 +51,5 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Oops!"
-  let details = "An unexpected error occurred."
-  let stack: string | undefined
-
-  if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error"
-    details =
-      error.status === 404
-        ? "The requested page could not be found."
-        : error.statusText || details
-  } else if (import.meta.env.DEV && error && error instanceof Error) {
-    details = error.message
-    stack = error.stack
-  }
-
-  return (
-    <main className="container mx-auto p-4 pt-16 flex flex-col items-center text-center space-y-4">
-      <h1 className="text-4xl font-heading font-bold">{message}</h1>
-      <p className="text-muted-foreground">{details}</p>
-      {stack && (
-        <pre className="w-full max-w-2xl text-left overflow-x-auto p-4 bg-muted rounded-lg text-xs font-mono">
-          <code>{stack}</code>
-        </pre>
-      )}
-    </main>
-  )
+  return <ErrorView error={error} />
 }
