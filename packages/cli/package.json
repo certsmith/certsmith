@@ -59,16 +59,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@clack/prompts": "^0.10.1",
-    "cloudflare": "^7.3.0",
-    "commander": "^13.1.0",
-    "dotenv": "^16.6.1",
-    "picocolors": "^1.1.1"
+    "@clack/prompts": "catalog:",
+    "cloudflare": "catalog:",
+    "commander": "catalog:",
+    "dotenv": "catalog:",
+    "picocolors": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^24.19.2",
-    "tsup": "^9.0.0",
-    "typescript": "^5.9.3"
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:"
   },
   "engines": {
     "node": ">=20.0.0"

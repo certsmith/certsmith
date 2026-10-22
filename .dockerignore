@@ -57,7 +57,12 @@ node_modules/
 **/node_modules/
 build/
 **/build/
+dist/
+**/dist/
 .react-router/
 **/.react-router/
 *.tsbuildinfo
-packages/
+.turbo/
+**/.turbo/
+out/
+**/out/

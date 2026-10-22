@@ -3,10 +3,14 @@
   "name": "certsmith-monorepo",
   "packageManager": "pnpm@12.15.0",
   "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "typecheck": "turbo run typecheck",
+    "format": "turbo run format",
     "certsmith": "pnpm --filter certsmith run certsmith",
-    "start": "pnpm --filter certsmith run start",
-    "build": "pnpm --filter certsmith run build",
-    "dev": "pnpm --filter certsmith run dev",
-    "typecheck": "pnpm --filter certsmith run typecheck"
+    "start": "pnpm --filter certsmith run start"
+  },
+  "devDependencies": {
+    "turbo": "catalog:"
   }
 }

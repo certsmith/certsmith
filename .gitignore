@@ -43,4 +43,7 @@ build/
 dist/
 **/dist/
 *.tsbuildinfo
-
+.turbo/
+**/.turbo/
+out/
+**/out/

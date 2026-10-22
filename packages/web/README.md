@@ -44,7 +44,7 @@ The frontend is architected using React Router 8 with full Static Site Generatio
 ## Architecture and Directory Structure
 
 ```
-web/
+packages/web/
 ├── app/
 │   ├── app.css                 # Base stylesheet and theme variables
 │   ├── components/             # Reusable UI components
@@ -133,13 +133,19 @@ The compiled static output will be located in `build/client`.
 The Trust Portal is compiled inside the multi-stage Dockerfile during Phase 0:
 
 ```dockerfile
+FROM node:24-alpine AS pruner
+WORKDIR /app
+RUN npm install -g turbo@^2
+COPY . .
+RUN turbo prune @certsmith/web --docker
+
 FROM node:24-alpine AS web-builder
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@latest --activate
-COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml web/.npmrc ./
+RUN corepack enable && corepack prepare pnpm@12.15.0 --activate
+COPY --from=pruner /app/out/json/ .
 RUN pnpm install --frozen-lockfile
-COPY web/ ./
-RUN pnpm build
+COPY --from=pruner /app/out/full/ .
+RUN pnpm turbo run build --filter=@certsmith/web
 ```
 
 During Phase 2, the resulting `build/client` directory is copied directly into Nginx's document root at `/var/www/certsmith/`. The operational container contains no Node.js runtime, ensuring minimal image size, zero memory consumption from JavaScript servers, and an ultra-lean security surface.

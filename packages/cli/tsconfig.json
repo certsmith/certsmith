@@ -3,9 +3,8 @@
     "target": "ES2024",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
     "outDir": "./dist",
     "rootDir": "./src",

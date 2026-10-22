@@ -123,10 +123,12 @@ certsmith/
 │   │   ├── forge-portal-tls.sh # Dual-stack portal TLS generation
 │   │   └── forge-verify.sh   # OpenSSL certificate chain verification
 │   └── test-issuance.sh      # ACME end-to-end issuance validation script
-└── web/                      # Trust Portal source (React Router 8, Tailwind v4, Shadcn)
-    ├── app/
-    ├── public/
-    └── package.json
+└── packages/
+    ├── cli/                  # Unified CLI Hub (certsmith CLI)
+    └── web/                  # Trust Portal source (React Router 8, Tailwind v4, Shadcn)
+        ├── app/
+        ├── public/
+        └── package.json
 ```
 
 ---

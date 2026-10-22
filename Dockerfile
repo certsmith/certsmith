@@ -16,22 +16,37 @@
 #     -v certsmith-data:/data \
 #     certsmith:latest
 # ==========================================
-# Phase 0: Build Web UI (Node 24 Alpine)
+# ==========================================
+# Phase 0a: Prune Monorepo via Turborepo
+# ==========================================
+FROM node:24-alpine AS pruner
+
+WORKDIR /app
+
+# Install turbo CLI globally for docker pruning
+RUN npm install -g turbo@^2
+
+# Copy monorepo sources and isolate @certsmith/web
+COPY . .
+RUN turbo prune @certsmith/web --docker
+
+# ==========================================
+# Phase 0b: Build Web UI (Node 24 Alpine)
 # ==========================================
 FROM node:24-alpine AS web-builder
 
 WORKDIR /app
 
 # Enable modern pnpm via Corepack
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@12.15.0 --activate
 
-# Layer caching for dependencies (isolated Docker layer, zero shared host directory)
-COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml web/.npmrc ./
+# Layer caching for dependencies (isolated pruned package manifests & workspace lockfile)
+COPY --from=pruner /app/out/json/ .
 RUN pnpm install --frozen-lockfile
 
-# Copy source and compile SSG static export
-COPY web/ ./
-RUN pnpm build
+# Copy pruned source and compile SSG static export via Turborepo
+COPY --from=pruner /app/out/full/ .
+RUN pnpm turbo run build --filter=@certsmith/web
 
 # ==========================================
 # Phase 1: Base Runtime Environment
@@ -72,7 +87,7 @@ RUN chmod +x /tmp/scripts/*.sh && \
 COPY configs/ /etc/certsmith/configs/
 
 # Trust Portal web assets (Compiled static files from web-builder, zero Node.js runtime)
-COPY --from=web-builder /app/build/client/ /var/www/trust-portal/
+COPY --from=web-builder /app/packages/web/build/client/ /var/www/trust-portal/
 
 # Tools (forge, test) + shared libraries
 COPY tools/ /usr/local/share/certsmith/tools/
