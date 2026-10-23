@@ -1,20 +1,28 @@
 // Certsmith CLI - Inspect Certificate Chains
-// Validates X.509 certificate chain integrity using OpenSSL.
+// Validates X.509 certificate chain integrity using OpenSSL (Host or Docker).
 
-import { run } from '@/utils/exec';
+import {
+  getRootCertLocation,
+  getIntermediateCertLocation,
+  runOpenssl,
+  type CertLocation,
+} from '@/pki/pki-paths';
 import { logOk, logFail, logInfo, logStep, logBlank } from '@/utils/logger';
-
-const ROOT_CERT = '/opt/certsmith/data/root/root_ca.crt';
 
 /**
  * Verify a certificate chain against the root CA.
  */
 export async function verifyChain(
-  certPath: string,
+  certLoc: CertLocation,
   label: string,
 ): Promise<boolean> {
-  const result = await run(
-    `openssl verify -CAfile ${ROOT_CERT} ${certPath}`,
+  const rootLoc = getRootCertLocation();
+
+  const result = await runOpenssl(
+    certLoc,
+    'verify -CAfile __CA__ __CERT__',
+    rootLoc.hostPath,
+    rootLoc.containerPath,
   );
 
   if (result.exitCode === 0 && result.stdout.includes(': OK')) {
@@ -23,7 +31,9 @@ export async function verifyChain(
   }
 
   logFail(`${label}: chain verification failed`);
-  if (result.stderr) logStep('Error', result.stderr);
+  if (result.stderr || result.stdout) {
+    logStep('Details', (result.stderr || result.stdout).trim());
+  }
   return false;
 }
 
@@ -31,11 +41,11 @@ export async function verifyChain(
  * Inspect the subject and issuer of a certificate.
  */
 export async function inspectCert(
-  certPath: string,
+  certLoc: CertLocation,
   label: string,
 ): Promise<void> {
-  const subj = await run(`openssl x509 -in ${certPath} -noout -subject`);
-  const issuer = await run(`openssl x509 -in ${certPath} -noout -issuer`);
+  const subj = await runOpenssl(certLoc, 'x509 -in __CERT__ -noout -subject');
+  const issuer = await runOpenssl(certLoc, 'x509 -in __CERT__ -noout -issuer');
 
   logBlank();
   logInfo(label);
@@ -50,8 +60,8 @@ export async function verifyAllChains(): Promise<void> {
   const tiers = ['cr1', 'cr2', 'cr3', 'ce1', 'ce2', 'ce3'];
   logBlank();
   for (const tier of tiers) {
-    const certPath = `/opt/certsmith/data/${tier}/${tier}_intermediate_ca.crt`;
-    await verifyChain(certPath, tier.toUpperCase());
+    const certLoc = getIntermediateCertLocation(tier);
+    await verifyChain(certLoc, tier.toUpperCase());
   }
   logBlank();
 }

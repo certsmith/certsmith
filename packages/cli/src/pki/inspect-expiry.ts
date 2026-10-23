@@ -1,7 +1,13 @@
 // Certsmith CLI - Certificate Expiry Auditor
-// Checks remaining validity of root, intermediate, and leaf certificates.
+// Checks remaining validity of root, intermediate, and leaf certificates (Host or Docker).
 
-import { run } from '@/utils/exec';
+import {
+  getRootCertLocation,
+  getIntermediateCertLocation,
+  getPortalCertLocation,
+  runOpenssl,
+  type CertLocation,
+} from '@/pki/pki-paths';
 import { logOk, logWarn, logFail, logStep, logBlank, logInfo } from '@/utils/logger';
 
 interface ExpiryInfo {
@@ -12,12 +18,10 @@ interface ExpiryInfo {
 }
 
 /**
- * Parse the expiry date of a certificate using OpenSSL.
+ * Parse the expiry date of a certificate using OpenSSL (local or in container).
  */
-async function getExpiry(certPath: string, label: string): Promise<ExpiryInfo> {
-  const result = await run(
-    `openssl x509 -in ${certPath} -noout -enddate`,
-  );
+async function getExpiry(certLoc: CertLocation, label: string): Promise<ExpiryInfo> {
+  const result = await runOpenssl(certLoc, 'x509 -in __CERT__ -noout -enddate');
 
   const match = result.stdout.match(/notAfter=(.+)/);
   const notAfter = match?.[1]?.trim() ?? 'unknown';
@@ -29,7 +33,12 @@ async function getExpiry(certPath: string, label: string): Promise<ExpiryInfo> {
     daysLeft = Math.floor((expDate.getTime() - now.getTime()) / 86_400_000);
   }
 
-  return { label, path: certPath, notAfter, daysLeft };
+  return {
+    label,
+    path: certLoc.hostPath ?? certLoc.containerPath,
+    notAfter,
+    daysLeft,
+  };
 }
 
 /**
@@ -55,22 +64,25 @@ export async function auditExpiry(): Promise<void> {
   logBlank();
 
   // Root CA
-  const root = await getExpiry('/opt/certsmith/data/root/root_ca.crt', 'Root CA');
+  const root = await getExpiry(getRootCertLocation(), 'Root CA');
   printExpiry(root);
 
   // Intermediates
   const tiers = ['cr1', 'cr2', 'cr3', 'ce1', 'ce2', 'ce3'];
   for (const tier of tiers) {
     const info = await getExpiry(
-      `/opt/certsmith/data/${tier}/${tier}_intermediate_ca.crt`,
+      getIntermediateCertLocation(tier),
       tier.toUpperCase(),
     );
     printExpiry(info);
   }
 
   // Portal TLS (if exists)
-  const portal = await getExpiry('/opt/certsmith/data/portal/portal.crt', 'Portal TLS');
-  if (portal.daysLeft >= 0) printExpiry(portal);
+  const portalLoc = getPortalCertLocation();
+  const portal = await getExpiry(portalLoc, 'Portal TLS');
+  if (portal.daysLeft >= 0) {
+    printExpiry(portal);
+  }
 
   logBlank();
 }
