@@ -54,16 +54,40 @@ export async function ensureAccountId(
   const cf = getClient(env);
   const accounts: { id: string; name: string }[] = [];
 
-  for await (const acc of cf.accounts.list()) {
-    if (acc.id) {
-      accounts.push({ id: acc.id, name: acc.name ?? acc.id });
+  try {
+    for await (const acc of cf.accounts.list()) {
+      if (acc.id) {
+        accounts.push({ id: acc.id, name: acc.name ?? acc.id });
+      }
+    }
+  } catch {
+    // accounts.list() may fail if the token lacks Account Settings:Read.
+    // Fall back to discovering account from zones (which uses Zone:Read).
+    logInfo('Could not list accounts directly. Trying zone-based discovery...');
+    try {
+      for await (const zone of cf.zones.list({ per_page: 1 })) {
+        if (zone.account?.id) {
+          accounts.push({
+            id: zone.account.id,
+            name: zone.account.name ?? zone.account.id,
+          });
+          break;
+        }
+      }
+    } catch {
+      // Zone discovery also failed
     }
   }
 
   if (accounts.length === 0) {
     throw new Error(
-      'No Cloudflare accounts accessible with this API token.\n' +
-      'Please verify that your token has account permissions or check your Cloudflare Dashboard.'
+      'Could not auto-discover Cloudflare Account ID.\n' +
+      'Your token may lack account-level permissions.\n\n' +
+      'How to fix:\n' +
+      '  1. Re-run `certsmith login` with a new token that has broader permissions\n' +
+      '  2. Or set your Account ID manually:\n' +
+      '     certsmith config set cloudflare.accountId <ACCOUNT_ID> --global\n' +
+      '  3. Find your Account ID at: https://dash.cloudflare.com → any zone → Overview → Account ID'
     );
   }
 
