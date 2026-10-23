@@ -11,6 +11,7 @@ import { stepcaHealth, stepcaProvisioners, stepcaRevoke } from '@/handlers/stepc
 import { pkiAudit, pkiVerify, pkiRenewPortal, pkiRotate, pkiCeremony } from '@/handlers/pki';
 import { handleHealthcheck } from '@/handlers/healthcheck';
 import { handleConfigInit, handleConfigPath, handleConfigGet, handleConfigSet } from '@/handlers/config';
+import { handleLogin } from '@/handlers/auth';
 
 export function createProgram(onInteractiveLaunch: () => Promise<void>): Command {
   const program = new Command();
@@ -108,6 +109,16 @@ export function createProgram(onInteractiveLaunch: () => Promise<void>): Command
     .command('health')
     .description('Run comprehensive health check across Docker, step-ca, and PKI')
     .action(actionWrapper(async (env) => handleHealthcheck(env)));
+
+  // Login (Browser-based Auth Wizard)
+  program
+    .command('login')
+    .description('Authenticate with Cloudflare via browser-based setup wizard')
+    .option('--no-browser', 'Print the URL instead of opening a browser (for SSH/headless)')
+    .action(async (opts) => {
+      const code = await handleLogin({ noBrowser: !opts.browser });
+      process.exit(code);
+    });
 
   // Configuration Group
   const config = program.command('config').description('Manage Certsmith configuration and credentials');
