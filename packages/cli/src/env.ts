@@ -1,62 +1,33 @@
-// Certsmith CLI - Environment Parser
-// Loads and validates required environment variables from .env
+// Certsmith CLI - Environment & Configuration Bridge
+// Resolves config via hierarchical loader and provides descriptive requirement errors.
 
-import { config } from 'dotenv';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
+import { resolveConfig } from '@/config/loader';
+import type { ResolvedCertsmithContext } from '@/config/types';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-export interface CertsmithEnv {
-  domains: string[];
-  primaryDomain: string;
-  cloudflareApiToken?: string;
-  cloudflareAccountId?: string;
-  cloudflareTunnelId?: string;
-  cloudflareZoneId?: string;
-  caPoolPath: string;
-  containerName: string;
-}
+export type CertsmithEnv = ResolvedCertsmithContext;
 
 /**
- * Locate the .env file by checking cwd and walking upwards, falling back to package root.
+ * Validate that at least one domain is configured.
  */
-function findEnvPath(): string {
-  // Check process.cwd() first (standard CLI runtime context)
-  const cwdCandidate = resolve(process.cwd(), '.env');
-  if (existsSync(cwdCandidate)) return cwdCandidate;
-
-  // Walk up from process.cwd()
-  let dir = process.cwd();
-  for (let i = 0; i < 5; i++) {
-    const candidate = resolve(dir, '.env');
-    if (existsSync(candidate)) return candidate;
-    const parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
+export function requireDomains(env: CertsmithEnv): string[] {
+  if (!env.domains || env.domains.length === 0) {
+    throw new Error(
+      `No domains configured for Certsmith.\n\n` +
+      `How to fix:\n` +
+      `  1. Set domains in ./certsmith.jsonc:\n` +
+      `     "domains": ["acme.example.com"]\n` +
+      `  2. Or set via CLI command:\n` +
+      `     certsmith config set domains '["acme.example.com"]'\n` +
+      `  3. Or export environment variable:\n` +
+      `     export CERTSMITH_DOMAINS="acme.example.com"\n`
+    );
   }
-
-  // Fallback: walk up from package location
-  const baseDir = typeof __dirname !== 'undefined'
-    ? __dirname
-    : dirname(fileURLToPath(import.meta.url));
-
-  dir = baseDir;
-  for (let i = 0; i < 5; i++) {
-    const candidate = resolve(dir, '.env');
-    if (existsSync(candidate)) return candidate;
-    const parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-
-  return cwdCandidate;
+  return env.domains;
 }
 
 /**
- * Validate and extract Cloudflare credentials from environment.
- * Throws descriptive error if any Cloudflare variable is missing.
+ * Validate and extract Cloudflare credentials.
+ * Throws a comprehensive diagnostic error with remediation steps if any variable is missing.
  */
 export function requireCloudflareEnv(env: CertsmithEnv): {
   apiToken: string;
@@ -64,42 +35,45 @@ export function requireCloudflareEnv(env: CertsmithEnv): {
   tunnelId: string;
   zoneId: string;
 } {
-  if (!env.cloudflareApiToken) throw new Error('Missing required CLOUDFLARE_API_TOKEN in .env');
-  if (!env.cloudflareAccountId) throw new Error('Missing required CLOUDFLARE_ACCOUNT_ID in .env');
-  if (!env.cloudflareTunnelId) throw new Error('Missing required CLOUDFLARE_TUNNEL_ID in .env');
-  if (!env.cloudflareZoneId) throw new Error('Missing required CLOUDFLARE_ZONE_ID in .env');
+  const missing: string[] = [];
+
+  if (!env.cloudflareApiToken) missing.push('CLOUDFLARE_API_TOKEN (or cloudflare.apiToken in config)');
+  if (!env.cloudflareAccountId) missing.push('CLOUDFLARE_ACCOUNT_ID (or cloudflare.accountId in config)');
+  if (!env.cloudflareTunnelId) missing.push('CLOUDFLARE_TUNNEL_ID (or cloudflare.tunnelId in config)');
+  if (!env.cloudflareZoneId) missing.push('CLOUDFLARE_ZONE_ID (or cloudflare.zoneId in config)');
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required Cloudflare configuration:\n` +
+      missing.map((m) => `  - ${m}`).join('\n') +
+      `\n\nHow to fix:` +
+      `\n  1. Store credentials securely in your user config (~/.config/certsmith/config.jsonc):` +
+      `\n     certsmith config init --global` +
+      `\n     certsmith config set cloudflare.apiToken <YOUR_TOKEN> --global` +
+      `\n     certsmith config set cloudflare.accountId <ACCOUNT_ID> --global` +
+      `\n     certsmith config set cloudflare.tunnelId <TUNNEL_ID> --global` +
+      `\n     certsmith config set cloudflare.zoneId <ZONE_ID> --global` +
+      `\n  2. Or export environment variables in your shell / CI:` +
+      `\n     export CLOUDFLARE_API_TOKEN="<token>"` +
+      `\n\nToken permission requirements:` +
+      `\n  - Zone:Read (Zone Resources: All zones)` +
+      `\n  - DNS:Edit (Zone Resources: All zones)` +
+      `\n  - Cloudflare Tunnel:Edit (Account Resources: All accounts)` +
+      `\n  - SSL and Certificates:Edit (Zone Resources: All zones)\n`
+    );
+  }
 
   return {
-    apiToken: env.cloudflareApiToken,
-    accountId: env.cloudflareAccountId,
-    tunnelId: env.cloudflareTunnelId,
-    zoneId: env.cloudflareZoneId,
+    apiToken: env.cloudflareApiToken!,
+    accountId: env.cloudflareAccountId!,
+    tunnelId: env.cloudflareTunnelId!,
+    zoneId: env.cloudflareZoneId!,
   };
 }
 
 /**
- * Load and parse required environment variables.
- * Domains are required for any operation; Cloudflare vars are optional until CF engine is used.
+ * Load and resolve configuration context from files and environment.
  */
-export function loadEnv(): CertsmithEnv {
-  const envPath = findEnvPath();
-  config({ path: envPath });
-
-  const raw = process.env.CERTSMITH_DOMAINS ?? process.env.CERTSMITH_DOMAIN ?? '';
-  const domains = raw.split(',').map((d) => d.trim()).filter(Boolean);
-
-  if (domains.length === 0) {
-    throw new Error('Missing CERTSMITH_DOMAINS in .env - at least one domain is required.');
-  }
-
-  return {
-    domains,
-    primaryDomain: domains[0],
-    cloudflareApiToken: process.env.CLOUDFLARE_API_TOKEN,
-    cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID,
-    cloudflareTunnelId: process.env.CLOUDFLARE_TUNNEL_ID,
-    cloudflareZoneId: process.env.CLOUDFLARE_ZONE_ID,
-    caPoolPath: process.env.CA_POOL_PATH ?? '/opt/certsmith/data/root/root_ca.crt',
-    containerName: process.env.CERTSMITH_CONTAINER ?? 'certsmith',
-  };
+export function loadEnv(customConfigPath?: string): CertsmithEnv {
+  return resolveConfig({ customConfigPath });
 }

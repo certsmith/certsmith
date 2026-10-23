@@ -1,5 +1,5 @@
 // Certsmith CLI - Main Entry Point
-// Interactive menu dispatcher for all engines.
+// Routes subcommands via Commander or launches the interactive hub.
 
 import * as p from '@clack/prompts';
 import { printBanner } from '@/ui/banner';
@@ -11,11 +11,12 @@ import { handleStepCa } from '@/handlers/stepca';
 import { handleDocker } from '@/handlers/docker';
 import { handlePki } from '@/handlers/pki';
 import { handleHealthcheck } from '@/handlers/healthcheck';
+import { createProgram } from '@/cli';
 
 type MenuAction = 'cf' | 'stepca' | 'docker' | 'pki' | 'health' | 'exit';
 
 async function mainMenu(): Promise<MenuAction> {
-  return selectOption<MenuAction>('Select an engine:', [
+  return selectOption<MenuAction>('Select an engine (q / Esc to exit):', [
     { value: 'cf', label: '[CF] Cloudflare Management' },
     { value: 'stepca', label: '[CA] step-ca Operations' },
     { value: 'docker', label: '[DOCKER] Docker Operations' },
@@ -25,7 +26,7 @@ async function mainMenu(): Promise<MenuAction> {
   ]);
 }
 
-async function main(): Promise<void> {
+export async function runInteractiveMenu(): Promise<void> {
   printBanner();
 
   let env;
@@ -36,21 +37,69 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  let running = true;
-  while (running) {
+  while (true) {
     const action = await mainMenu();
 
+    let executed = false;
     switch (action) {
-      case 'cf': await handleCloudflare(env); break;
-      case 'stepca': await handleStepCa(env); break;
-      case 'docker': await handleDocker(env); break;
-      case 'pki': await handlePki(env); break;
-      case 'health': await handleHealthcheck(env); break;
-      case 'exit': running = false; break;
+      case 'cf':
+        executed = await handleCloudflare(env);
+        break;
+      case 'stepca':
+        executed = await handleStepCa(env);
+        break;
+      case 'docker':
+        executed = await handleDocker(env);
+        break;
+      case 'pki':
+        executed = await handlePki(env);
+        break;
+      case 'health':
+        await handleHealthcheck(env);
+        executed = true;
+        break;
+      case 'exit':
+        p.outro('Goodbye.');
+        process.exit(0);
+    }
+
+    if (executed) {
+      // Completed selected operation. Return cleanly to shell terminal.
+      process.exit(0);
     }
   }
+}
 
-  p.outro('Goodbye.');
+// Global process signal handlers
+process.on('SIGINT', () => {
+  console.log('\n');
+  process.exit(130);
+});
+process.on('SIGTERM', () => {
+  process.exit(143);
+});
+
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  const program = createProgram(runInteractiveMenu);
+
+  if (args.length === 0) {
+    // If running in terminal interactively, open Clack menu
+    if (process.stdout.isTTY) {
+      await runInteractiveMenu();
+      return;
+    }
+    // If running headless / piped without arguments, output help and exit
+    program.help();
+    return;
+  }
+
+  if (args.includes('-i') || args.includes('--interactive')) {
+    await runInteractiveMenu();
+    return;
+  }
+
+  await program.parseAsync(process.argv);
 }
 
 main().catch((err) => {

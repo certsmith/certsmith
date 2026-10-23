@@ -1,5 +1,5 @@
 // Certsmith CLI - Docker Handler
-// Submenu for Docker container lifecycle management.
+// Submenu and direct actions for Docker container lifecycle management.
 
 import type { CertsmithEnv } from '@/env';
 import { selectOption } from '@/ui/prompt-helpers';
@@ -8,11 +8,31 @@ import { restartContainer } from '@/docker/restart-container';
 import { buildImage } from '@/docker/build-image';
 import { streamLogs } from '@/docker/stream-logs';
 
+export async function dockerStatus(containerName: string): Promise<number> {
+  await printContainerStatus(containerName);
+  return 0;
+}
+
+export async function dockerRestart(containerName: string): Promise<number> {
+  await restartContainer(containerName);
+  return 0;
+}
+
+export async function dockerBuild(buildContext: string = '.'): Promise<number> {
+  await buildImage(buildContext);
+  return 0;
+}
+
+export async function dockerLogs(containerName: string, tail?: number): Promise<number> {
+  await streamLogs(containerName, tail);
+  return 0;
+}
+
 type DockerAction = 'status' | 'restart' | 'build' | 'logs' | 'back';
 
-export async function handleDocker(env: CertsmithEnv): Promise<void> {
+export async function handleDocker(env: CertsmithEnv): Promise<boolean> {
   const action = await selectOption<DockerAction>(
-    'Docker Operations:',
+    'Docker Operations (q / Esc to exit):',
     [
       { value: 'status', label: 'Container Status' },
       { value: 'restart', label: 'Restart Container', hint: 'Stop + Remove + Launch' },
@@ -24,18 +44,18 @@ export async function handleDocker(env: CertsmithEnv): Promise<void> {
 
   switch (action) {
     case 'status':
-      await printContainerStatus(env.containerName);
-      break;
+      await dockerStatus(env.containerName);
+      return true;
     case 'restart':
-      await restartContainer(env.containerName);
-      break;
+      await dockerRestart(env.containerName);
+      return true;
     case 'build':
-      await buildImage('.');
-      break;
+      await dockerBuild('.');
+      return true;
     case 'logs':
-      await streamLogs(env.containerName);
-      break;
+      await dockerLogs(env.containerName);
+      return true;
     case 'back':
-      break;
+      return false;
   }
 }

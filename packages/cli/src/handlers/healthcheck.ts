@@ -2,7 +2,7 @@
 // Runs a comprehensive system health check across all engines.
 
 import type { CertsmithEnv } from '@/env';
-import { logInfo, logBlank, logDivider } from '@/utils/logger';
+import { logInfo, logDivider } from '@/utils/logger';
 import { printContainerStatus } from '@/docker/check-status';
 import { checkAllTiersHealth } from '@/stepca/health';
 import { auditExpiry } from '@/pki/inspect-expiry';
@@ -16,7 +16,7 @@ import * as p from '@clack/prompts';
  * 3. Certificate expiry audit
  * 4. Chain integrity verification
  */
-export async function handleHealthcheck(env: CertsmithEnv): Promise<void> {
+export async function handleHealthcheck(env: CertsmithEnv): Promise<number> {
   p.intro('Full System Healthcheck');
 
   logInfo('1/4 - Docker Container Status');
@@ -36,4 +36,5 @@ export async function handleHealthcheck(env: CertsmithEnv): Promise<void> {
   await verifyAllChains();
 
   p.outro('Healthcheck complete.');
+  return 0;
 }

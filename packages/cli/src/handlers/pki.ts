@@ -1,5 +1,5 @@
 // Certsmith CLI - PKI Handler
-// Submenu for PKI and CA certificate operations.
+// Submenu and direct actions for PKI and CA certificate operations.
 
 import type { CertsmithEnv } from '@/env';
 import { selectOption } from '@/ui/prompt-helpers';
@@ -9,11 +9,36 @@ import { triggerPortalTls } from '@/pki/trigger-portal-tls';
 import { triggerForge } from '@/pki/trigger-forge';
 import { rotateIntermediate } from '@/pki/rotate-intermediate';
 
+export async function pkiAudit(): Promise<number> {
+  await auditExpiry();
+  return 0;
+}
+
+export async function pkiVerify(): Promise<number> {
+  await verifyAllChains();
+  return 0;
+}
+
+export async function pkiRenewPortal(containerName: string): Promise<number> {
+  await triggerPortalTls(containerName);
+  return 0;
+}
+
+export async function pkiRotate(containerName: string): Promise<number> {
+  await rotateIntermediate(containerName);
+  return 0;
+}
+
+export async function pkiCeremony(): Promise<number> {
+  await triggerForge();
+  return 0;
+}
+
 type PkiAction = 'audit' | 'chains' | 'renew-portal' | 'rotate' | 'ceremony' | 'back';
 
-export async function handlePki(env: CertsmithEnv): Promise<void> {
+export async function handlePki(env: CertsmithEnv): Promise<boolean> {
   const action = await selectOption<PkiAction>(
-    'PKI & CA Operations:',
+    'PKI & CA Operations (q / Esc to exit):',
     [
       { value: 'audit', label: 'Audit Expiry', hint: 'Root + 6 intermediates' },
       { value: 'chains', label: 'Verify Chains', hint: 'OpenSSL validation' },
@@ -26,21 +51,21 @@ export async function handlePki(env: CertsmithEnv): Promise<void> {
 
   switch (action) {
     case 'audit':
-      await auditExpiry();
-      break;
+      await pkiAudit();
+      return true;
     case 'chains':
-      await verifyAllChains();
-      break;
+      await pkiVerify();
+      return true;
     case 'renew-portal':
-      await triggerPortalTls(env.containerName);
-      break;
+      await pkiRenewPortal(env.containerName);
+      return true;
     case 'rotate':
-      await rotateIntermediate(env.containerName);
-      break;
+      await pkiRotate(env.containerName);
+      return true;
     case 'ceremony':
-      await triggerForge();
-      break;
+      await pkiCeremony();
+      return true;
     case 'back':
-      break;
+      return false;
   }
 }

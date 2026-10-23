@@ -63,9 +63,11 @@
     "cloudflare": "catalog:",
     "commander": "catalog:",
     "dotenv": "catalog:",
+    "figlet": "catalog:",
     "picocolors": "catalog:"
   },
   "devDependencies": {
+    "@types/figlet": "catalog:",
     "@types/node": "catalog:",
     "tsup": "catalog:",
     "typescript": "catalog:"
