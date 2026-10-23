@@ -3,6 +3,7 @@
 
 import type { CertsmithEnv } from '@/env';
 import type { IngressRule } from '@/cloudflare/tunnel-get';
+import { parse as parseTld } from 'tldts';
 import { logWarn } from '@/utils/logger';
 
 export interface StrictTlsOptions {
@@ -13,21 +14,14 @@ export interface StrictTlsOptions {
 }
 
 /**
- * Non-routable / local TLDs that should never be pushed to Cloudflare Tunnel.
- */
-const LOCAL_TLDS = new Set([
-  'lo', 'local', 'localhost', 'internal', 'test', 'example',
-  'invalid', 'lan', 'home', 'localdomain', 'intranet', 'corp',
-]);
-
-/**
- * Check if a domain is a local/non-routable domain that cannot be used
- * with Cloudflare Tunnel.
+ * Check if a domain is non-routable / not a registered public domain.
+ * Uses the Mozilla Public Suffix List (via tldts) to verify that the
+ * domain's TLD is a real ICANN-registered suffix.
+ * Domains like .lo, .local, .internal, .test will return true.
  */
 export function isLocalDomain(hostname: string): boolean {
-  const parts = hostname.split('.');
-  const tld = parts[parts.length - 1].toLowerCase();
-  return LOCAL_TLDS.has(tld);
+  const result = parseTld(hostname, { allowPrivateDomains: false });
+  return !result.isIcann || !result.domain;
 }
 
 /**

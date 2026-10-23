@@ -65,7 +65,8 @@
     "commander": "catalog:",
     "dotenv": "catalog:",
     "figlet": "catalog:",
-    "picocolors": "catalog:"
+    "picocolors": "catalog:",
+    "tldts": "^7.4.19"
   },
   "devDependencies": {
     "@types/figlet": "catalog:",
