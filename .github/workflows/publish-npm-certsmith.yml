@@ -39,14 +39,14 @@ jobs:
 
       - name: Set custom version (if provided via dispatch)
         if: ${{ github.event.inputs.version != '' }}
-        run: npm version ${{ github.event.inputs.version }} --no-git-tag-version
+        run: npm version ${{ github.event.inputs.version }} --no-git-tag-version --allow-same-version
         working-directory: packages/cli
 
       - name: Extract version from tag (if tag push)
         if: ${{ startsWith(github.ref, 'refs/tags/cli-v') }}
         run: |
           TAG_VERSION=${GITHUB_REF_NAME#cli-v}
-          npm version ${TAG_VERSION} --no-git-tag-version
+          npm version ${TAG_VERSION} --no-git-tag-version --allow-same-version
         working-directory: packages/cli
 
       - name: Typecheck CLI package
