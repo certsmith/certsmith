@@ -48,7 +48,8 @@
     "LICENSE"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "certsmith": "node ./bin/certsmith.js",
