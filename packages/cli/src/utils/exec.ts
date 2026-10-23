@@ -48,7 +48,7 @@ export function streamCommand(
     const child = spawn(command, args, {
       cwd: options?.cwd,
       stdio: 'inherit',
-      shell: true,
+      shell: false,
     });
     child.on('close', (code) => resolve(code ?? 1));
     child.on('error', () => resolve(1));
