@@ -11,8 +11,10 @@ npm install -g certsmith
 # Or via pnpm
 pnpm add -g certsmith
 
-# Or run directly via npx / pnpx
+# Or run directly via npx / pnpm dlx
 npx certsmith
+# or
+pnpm dlx certsmith
 ```
 
 ## Features
