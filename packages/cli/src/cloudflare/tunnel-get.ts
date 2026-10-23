@@ -3,6 +3,7 @@
 
 import type { CertsmithEnv } from '@/env';
 import { getClient } from '@/cloudflare/client';
+import { ensureAccountId, ensureTunnelId } from '@/cloudflare/resolver';
 import { logInfo, logOk, logFail, logStep, logBlank } from '@/utils/logger';
 
 export interface IngressRule {
@@ -25,12 +26,15 @@ export interface TunnelConfig {
 export async function getTunnelConfig(env: CertsmithEnv): Promise<TunnelConfig | null> {
   const cf = getClient(env);
 
+  const accountId = await ensureAccountId(env);
+  const tunnelId = await ensureTunnelId(env, { accountId });
+
   logInfo('Fetching tunnel configuration...');
 
   try {
     const result = await cf.zeroTrust.tunnels.cloudflared.configurations.get(
-      env.cloudflareTunnelId!,
-      { account_id: env.cloudflareAccountId! },
+      tunnelId,
+      { account_id: accountId },
     );
 
     const config = result.config;

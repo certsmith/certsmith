@@ -550,7 +550,7 @@ export function generateAuthWizardHtml(port: number): string {
           </div>
 
           <a
-            href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22dns%22%2C%22type%22%3A%22zone%22%2C%22access%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22ssl_and_certificates%22%2C%22type%22%3A%22zone%22%2C%22access%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22tunnel%22%2C%22type%22%3A%22account%22%2C%22access%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22zone%22%2C%22type%22%3A%22zone%22%2C%22access%22%3A%22read%22%7D%5D"
+            href="https://dash.cloudflare.com/profile/api-tokens?name=Certsmith+CLI+Token&accountId=*&zoneId=all&permissionGroupKeys=%5B%7B%22key%22%3A%22dns%22%2C%22type%22%3A%22zone%22%2C%22access%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22ssl_and_certificates%22%2C%22type%22%3A%22zone%22%2C%22access%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22tunnel%22%2C%22type%22%3A%22account%22%2C%22access%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22zone%22%2C%22type%22%3A%22zone%22%2C%22access%22%3A%22read%22%7D%5D"
             target="_blank"
             rel="noopener"
             class="btn btn-primary btn-full"
@@ -561,11 +561,11 @@ export function generateAuthWizardHtml(port: number): string {
               <polyline points="15 3 21 3 21 9"/>
               <line x1="10" y1="14" x2="21" y2="3"/>
             </svg>
-            Open Cloudflare Dashboard — Create Token
+            Open Cloudflare Dashboard — Pre-filled Token
           </a>
 
           <p class="form-hint" style="text-align: center; margin-top: 0.75rem;">
-            This opens the Cloudflare API Tokens page. Click <strong>Create Token</strong> → <strong>Custom token</strong>.
+            This template pre-selects the token name, required permissions, and resources automatically. Click <strong>Continue to summary</strong> → <strong>Create Token</strong>.
           </p>
 
           <div class="separator"></div>

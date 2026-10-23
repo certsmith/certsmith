@@ -3,6 +3,7 @@
 
 import type { CertsmithEnv } from '@/env';
 import { getClient } from '@/cloudflare/client';
+import { ensureZoneId } from '@/cloudflare/resolver';
 import { logOk, logFail, logStep, logBlank } from '@/utils/logger';
 import * as p from '@clack/prompts';
 
@@ -16,13 +17,14 @@ export async function createCustomHostname(
   customOrigin: string,
 ): Promise<string | null> {
   const cf = getClient(env);
+  const zoneId = await ensureZoneId(env);
 
   const spinner = p.spinner();
   spinner.start(`Registering custom hostname: ${hostname}`);
 
   try {
     const result = await cf.customHostnames.create({
-      zone_id: env.cloudflareZoneId!,
+      zone_id: zoneId,
       hostname,
       ssl: {
         method: 'http',

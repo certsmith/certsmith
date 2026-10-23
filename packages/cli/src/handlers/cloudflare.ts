@@ -1,7 +1,7 @@
 // Certsmith CLI - Cloudflare Handler
 // Provides both interactive submenu and direct command actions.
 
-import { requireCloudflareEnv, type CertsmithEnv } from '@/env';
+import { requireCloudflareToken, type CertsmithEnv } from '@/env';
 import { selectOption } from '@/ui/prompt-helpers';
 import { syncAll } from '@/cloudflare/sync-all';
 import { listCustomHostnames, printHostnameTable } from '@/cloudflare/saas-list';
@@ -9,32 +9,47 @@ import { getTunnelConfig, printIngressRules } from '@/cloudflare/tunnel-get';
 import { logFail } from '@/utils/logger';
 
 export async function syncCloudflare(env: CertsmithEnv): Promise<number> {
-  requireCloudflareEnv(env);
-  await syncAll(env);
-  return 0;
+  requireCloudflareToken(env);
+  try {
+    await syncAll(env);
+    return 0;
+  } catch (err) {
+    logFail(err instanceof Error ? err.message : String(err));
+    return 1;
+  }
 }
 
 export async function listCloudflareHostnames(env: CertsmithEnv): Promise<number> {
-  requireCloudflareEnv(env);
-  const entries = await listCustomHostnames(env);
-  printHostnameTable(entries);
-  return 0;
+  requireCloudflareToken(env);
+  try {
+    const entries = await listCustomHostnames(env);
+    printHostnameTable(entries);
+    return 0;
+  } catch (err) {
+    logFail(err instanceof Error ? err.message : String(err));
+    return 1;
+  }
 }
 
 export async function viewCloudflareTunnel(env: CertsmithEnv): Promise<number> {
-  requireCloudflareEnv(env);
-  const config = await getTunnelConfig(env);
-  if (config) {
-    printIngressRules(config);
+  requireCloudflareToken(env);
+  try {
+    const config = await getTunnelConfig(env);
+    if (config) {
+      printIngressRules(config);
+    }
+    return 0;
+  } catch (err) {
+    logFail(err instanceof Error ? err.message : String(err));
+    return 1;
   }
-  return 0;
 }
 
 type CfAction = 'sync' | 'list-saas' | 'view-tunnel' | 'back';
 
 export async function handleCloudflare(env: CertsmithEnv): Promise<boolean> {
   try {
-    requireCloudflareEnv(env);
+    requireCloudflareToken(env);
   } catch (err) {
     logFail(err instanceof Error ? err.message : String(err));
     return true; // Finished handling (error shown)

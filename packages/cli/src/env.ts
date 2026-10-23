@@ -26,48 +26,42 @@ export function requireDomains(env: CertsmithEnv): string[] {
 }
 
 /**
+ * Validate that Cloudflare API Token is configured.
+ * This is the only strictly mandatory secret for Cloudflare operations.
+ */
+export function requireCloudflareToken(env: CertsmithEnv): string {
+  if (!env.cloudflareApiToken) {
+    throw new Error(
+      `Cloudflare API Token not found.\n\n` +
+      `How to fix:\n` +
+      `  1. Run the interactive browser login wizard:\n` +
+      `     certsmith login\n\n` +
+      `  2. Or store your token in user config (~/.config/certsmith/config.jsonc):\n` +
+      `     certsmith config set cloudflare.apiToken <YOUR_TOKEN> --global\n\n` +
+      `  3. Or export environment variable:\n` +
+      `     export CLOUDFLARE_API_TOKEN="<token>"\n`
+    );
+  }
+  return env.cloudflareApiToken;
+}
+
+/**
  * Validate and extract Cloudflare credentials.
- * Throws a comprehensive diagnostic error with remediation steps if any variable is missing.
+ * Only validates that apiToken is present; other fields can be dynamically resolved.
  */
 export function requireCloudflareEnv(env: CertsmithEnv): {
   apiToken: string;
-  accountId: string;
-  tunnelId: string;
-  zoneId: string;
+  accountId?: string;
+  tunnelId?: string;
+  zoneId?: string;
 } {
-  const missing: string[] = [];
-
-  if (!env.cloudflareApiToken) missing.push('CLOUDFLARE_API_TOKEN (or cloudflare.apiToken in config)');
-  if (!env.cloudflareAccountId) missing.push('CLOUDFLARE_ACCOUNT_ID (or cloudflare.accountId in config)');
-  if (!env.cloudflareTunnelId) missing.push('CLOUDFLARE_TUNNEL_ID (or cloudflare.tunnelId in config)');
-  if (!env.cloudflareZoneId) missing.push('CLOUDFLARE_ZONE_ID (or cloudflare.zoneId in config)');
-
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing required Cloudflare configuration:\n` +
-      missing.map((m) => `  - ${m}`).join('\n') +
-      `\n\nHow to fix:` +
-      `\n  1. Store credentials securely in your user config (~/.config/certsmith/config.jsonc):` +
-      `\n     certsmith config init --global` +
-      `\n     certsmith config set cloudflare.apiToken <YOUR_TOKEN> --global` +
-      `\n     certsmith config set cloudflare.accountId <ACCOUNT_ID> --global` +
-      `\n     certsmith config set cloudflare.tunnelId <TUNNEL_ID> --global` +
-      `\n     certsmith config set cloudflare.zoneId <ZONE_ID> --global` +
-      `\n  2. Or export environment variables in your shell / CI:` +
-      `\n     export CLOUDFLARE_API_TOKEN="<token>"` +
-      `\n\nToken permission requirements:` +
-      `\n  - Zone:Read (Zone Resources: All zones)` +
-      `\n  - DNS:Edit (Zone Resources: All zones)` +
-      `\n  - Cloudflare Tunnel:Edit (Account Resources: All accounts)` +
-      `\n  - SSL and Certificates:Edit (Zone Resources: All zones)\n`
-    );
-  }
+  requireCloudflareToken(env);
 
   return {
     apiToken: env.cloudflareApiToken!,
-    accountId: env.cloudflareAccountId!,
-    tunnelId: env.cloudflareTunnelId!,
-    zoneId: env.cloudflareZoneId!,
+    accountId: env.cloudflareAccountId,
+    tunnelId: env.cloudflareTunnelId,
+    zoneId: env.cloudflareZoneId,
   };
 }
 

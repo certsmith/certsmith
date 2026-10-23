@@ -4,6 +4,7 @@
 import type Cloudflare from 'cloudflare';
 import type { CertsmithEnv } from '@/env';
 import { getClient } from '@/cloudflare/client';
+import { ensureZoneId } from '@/cloudflare/resolver';
 import { logInfo, logOk, logFail, logStep, logBlank } from '@/utils/logger';
 
 export interface SaaSHostEntry {
@@ -21,11 +22,13 @@ export async function listCustomHostnames(env: CertsmithEnv): Promise<SaaSHostEn
   const cf = getClient(env);
   const entries: SaaSHostEntry[] = [];
 
+  const zoneId = await ensureZoneId(env);
+
   logInfo('Fetching custom hostnames from Cloudflare...');
 
   try {
     for await (const host of cf.customHostnames.list({
-      zone_id: env.cloudflareZoneId!,
+      zone_id: zoneId,
     })) {
       entries.push({
         id: host.id ?? '',

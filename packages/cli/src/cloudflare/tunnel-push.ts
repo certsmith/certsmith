@@ -3,6 +3,7 @@
 
 import type { CertsmithEnv } from '@/env';
 import { getClient } from '@/cloudflare/client';
+import { ensureAccountId, ensureTunnelId } from '@/cloudflare/resolver';
 import type { IngressRule } from '@/cloudflare/tunnel-get';
 import { logOk, logFail } from '@/utils/logger';
 import * as p from '@clack/prompts';
@@ -16,6 +17,9 @@ export async function pushTunnelConfig(
   ingress: IngressRule[],
 ): Promise<boolean> {
   const cf = getClient(env);
+  const accountId = await ensureAccountId(env);
+  const tunnelId = await ensureTunnelId(env, { accountId });
+
   const spinner = p.spinner();
   spinner.start('Pushing tunnel configuration to Cloudflare...');
 
@@ -34,9 +38,9 @@ export async function pushTunnelConfig(
     });
 
     await cf.zeroTrust.tunnels.cloudflared.configurations.update(
-      env.cloudflareTunnelId!,
+      tunnelId,
       {
-        account_id: env.cloudflareAccountId!,
+        account_id: accountId,
         config: { ingress: sdkIngress as never },
       },
     );
