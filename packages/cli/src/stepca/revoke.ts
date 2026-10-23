@@ -21,7 +21,7 @@ export async function revokeCertificate(
     'ca', 'revoke',
     serial,
     '--ca-url', caUrl,
-    '--root', '/opt/certsmith/data/root/root_ca.crt',
+    '--root', '/data/root/root_ca.crt',
     '--reason', reason,
   ]);
 

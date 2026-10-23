@@ -52,11 +52,28 @@ fi
 
 install -m 0755 "${STEP_CA_BIN}" /usr/local/bin/step-ca
 
-# Verify installation
+# Verify step-ca installation
 step-ca version || echo "[certsmith] WARNING: step-ca version check returned non-zero (may require config to run)."
 
-# Cleanup download artifacts
+# Cleanup step-ca download artifacts
 rm -f /tmp/step-ca.tar.gz
 rm -rf /tmp/step-ca*
 
 echo "[certsmith] step-ca v${STEP_CA_VERSION} installed to /usr/local/bin/step-ca."
+
+# Also install official Smallstep CLI (step) for admin operations like revocation
+STEP_CLI_VERSION="${STEP_CLI_VERSION:-0.31.0}"
+STEP_CLI_URL="https://github.com/smallstep/cli/releases/download/v${STEP_CLI_VERSION}/step_linux_${STEP_CLI_VERSION}_${STEP_ARCH}.tar.gz"
+
+echo "[certsmith] Downloading step CLI v${STEP_CLI_VERSION} (${STEP_ARCH})..."
+curl -fsSL "${STEP_CLI_URL}" -o /tmp/step.tar.gz
+tar -xzf /tmp/step.tar.gz -C /tmp/
+STEP_BIN=$(find /tmp -name "step" -type f 2>/dev/null | head -1)
+if [ -n "${STEP_BIN}" ]; then
+    install -m 0755 "${STEP_BIN}" /usr/local/bin/step
+    step version || true
+    echo "[certsmith] step CLI v${STEP_CLI_VERSION} installed to /usr/local/bin/step."
+fi
+rm -f /tmp/step.tar.gz
+rm -rf /tmp/step*
+

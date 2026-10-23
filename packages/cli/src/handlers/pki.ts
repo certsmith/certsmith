@@ -20,14 +20,15 @@ export async function pkiVerify(): Promise<number> {
 }
 
 export async function pkiRenewPortal(containerName: string): Promise<number> {
-  await triggerPortalTls(containerName);
-  return 0;
+  const ok = await triggerPortalTls(containerName);
+  return ok ? 0 : 1;
 }
 
 export async function pkiRotate(containerName: string): Promise<number> {
-  await rotateIntermediate(containerName);
-  return 0;
+  const ok = await rotateIntermediate(containerName);
+  return ok ? 0 : 1;
 }
+
 
 export async function pkiCeremony(): Promise<number> {
   await triggerForge();
