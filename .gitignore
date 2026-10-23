@@ -47,3 +47,5 @@ dist/
 **/.turbo/
 out/
 **/out/
+.placeholder/
+

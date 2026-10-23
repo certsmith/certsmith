@@ -12,3 +12,5 @@ tmp export-ignore
 data export-ignore
 web/.prettierignore export-ignore
 web/.prettierrc export-ignore
+.placeholder export-ignore
+

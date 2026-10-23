@@ -66,3 +66,7 @@ dist/
 **/.turbo/
 out/
 **/out/
+
+# Temporary placeholder
+.placeholder/
+
