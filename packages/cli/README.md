@@ -4,16 +4,31 @@ Unified CLI Hub for Certsmith - Cloudflare SaaS, step-ca, Docker, and PKI Manage
 
 ## Installation
 
+### Global Installation
+
 ```bash
-# Global installation via npm
+# Via npm (use sudo if your system encounters EACCES permission errors)
+sudo npm install -g certsmith
+# or without sudo if npm prefix is set to user space:
 npm install -g certsmith
 
-# Or via pnpm
+# Or via pnpm (recommended: installs to user-space without requiring sudo)
 pnpm add -g certsmith
+```
 
-# Or run directly via npx / pnpm dlx
+> [!NOTE]
+> **Permission Error (`EACCES`) on Linux / macOS:**
+> If you encounter `npm error code EACCES: permission denied, mkdir '/usr/lib/node_modules/certsmith'`, run the command with `sudo` (`sudo npm install -g certsmith`), or install via `pnpm add -g certsmith` which places binaries in your user directory (`~/.local/share/pnpm`).
+
+### Direct Execution (No Installation Required)
+
+You can also run Certsmith on-demand without installing it globally:
+
+```bash
+# Via npx
 npx certsmith
-# or
+
+# Or via pnpm dlx
 pnpm dlx certsmith
 ```
 
