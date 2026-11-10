@@ -37,16 +37,16 @@ export function buildTierVariables(origin: string): TierVariables {
     ROOT_CA_URL: `${cleanOrigin}/root_ca.crt`,
     HEALTH_URL: `${cleanOrigin}/healthz`,
     // ECC Tiers
-    ACME_URL_CE1: `${cleanOrigin}/ce1/acme/ce1/directory`,
-    ACME_URL_CE2: `${cleanOrigin}/ce2/acme/ce2/directory`,
-    ACME_URL_CE3: `${cleanOrigin}/ce3/acme/ce3/directory`,
+    ACME_URL_CE1: `${cleanOrigin}/acme/ce1/directory`,
+    ACME_URL_CE2: `${cleanOrigin}/acme/ce2/directory`,
+    ACME_URL_CE3: `${cleanOrigin}/acme/ce3/directory`,
     // RSA Tiers
-    ACME_URL_CR1: `${cleanOrigin}/cr1/acme/cr1/directory`,
-    ACME_URL_CR2: `${cleanOrigin}/cr2/acme/cr2/directory`,
-    ACME_URL_CR3: `${cleanOrigin}/cr3/acme/cr3/directory`,
+    ACME_URL_CR1: `${cleanOrigin}/acme/cr1/directory`,
+    ACME_URL_CR2: `${cleanOrigin}/acme/cr2/directory`,
+    ACME_URL_CR3: `${cleanOrigin}/acme/cr3/directory`,
     // Common aliases
-    ACME_URL_DEFAULT: `${cleanOrigin}/ce2/acme/ce2/directory`,
-    ACME_URL_LEGACY: `${cleanOrigin}/cr3/acme/cr3/directory`,
+    ACME_URL_DEFAULT: `${cleanOrigin}/acme/ce2/directory`,
+    ACME_URL_LEGACY: `${cleanOrigin}/acme/cr3/directory`,
   }
 }
 

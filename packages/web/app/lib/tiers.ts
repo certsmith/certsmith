@@ -78,7 +78,7 @@ export const ECC_TIERS = [TIERS.ce1, TIERS.ce2, TIERS.ce3]
 
 export function buildAcmeUrl(baseUrl: string, tierKey: string): string {
   const origin = baseUrl.replace(/\/+$/, "")
-  return `${origin}/${tierKey}/acme/${tierKey}/directory`
+  return `${origin}/acme/${tierKey}/directory`
 }
 
 export function buildCertbotCommand(tier: TierInfo, acmeUrl: string): string {
