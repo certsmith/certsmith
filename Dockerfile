@@ -86,8 +86,8 @@ RUN chmod +x /tmp/scripts/*.sh && \
 # Nginx configuration templates
 COPY configs/ /etc/certsmith/configs/
 
-# Trust Portal web assets (Compiled static files from web-builder, zero Node.js runtime)
-COPY --from=web-builder /app/packages/web/build/client/ /var/www/trust-portal/
+# Next.js + Fumadocs Web Application
+COPY --from=web-builder /app/packages/web/ /var/www/certsmith-web/
 
 # Tools (forge, test) + shared libraries
 COPY tools/ /usr/local/share/certsmith/tools/

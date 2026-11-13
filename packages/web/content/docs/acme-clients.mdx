@@ -1,0 +1,208 @@
+---
+title: ACME Client Configuration
+description: Configure modern ACME clients including Certbot, acme.sh, Caddy, Traefik, Lego, and step CLI for automated TLS certificate issuance.
+icon: Terminal
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+import { Callout } from 'fumadocs-ui/components/callout';
+
+Certsmith provides automated TLS certificate issuance and renewal via the standard ACME v2 protocol across 6 specialized certificate authority tiers. This guide details how to configure popular ACME clients and web servers to issue certificates through Certsmith.
+
+---
+
+## All 6 ACME Directory Endpoints
+
+Certsmith operates 6 independent intermediate authority tiers. Select the ACME directory endpoint that matches your security and cryptographic requirements:
+
+### Elliptic Curve Cryptography (ECC) Family
+
+| Tier | Algorithm & Curve | ACME Directory URL | Recommended Use Case |
+| :--- | :--- | :--- | :--- |
+| **CE2** *(Default)* | ECDSA P-256 (`secp256r1`) | `/acme/ce2/directory` | Modern default, fast handshakes, low CPU overhead |
+| **CE1** | ECDSA P-384 (`secp384r1`) | `/acme/ce1/directory` | High assurance enterprise systems |
+| **CE3** | ECDSA P-521 (`secp521r1`) | `/acme/ce3/directory` | Ultra high security & long-term resistance |
+
+### Rivest–Shamir–Adleman (RSA) Family
+
+| Tier | Algorithm & Key Size | ACME Directory URL | Recommended Use Case |
+| :--- | :--- | :--- | :--- |
+| **CR3** *(Legacy)* | RSA 2048-bit | `/acme/cr3/directory` | Maximum compatibility with legacy hardware & legacy OS |
+| **CR2** | RSA 3072-bit | `/acme/cr2/directory` | Enterprise standard RSA (equivalent to 128-bit security) |
+| **CR1** | RSA 4096-bit | `/acme/cr1/directory` | Maximum RSA security & archival certification |
+
+<Callout type="warn">
+  Ensure the **Certsmith Root CA** is installed in your system's trust store (or specified in your ACME client options) so the client can verify the CA endpoint securely. You can download it directly from [`/root_ca.crt`](/root_ca.crt).
+</Callout>
+
+---
+
+## ACME Client Guides
+
+<Tabs items={['Certbot', 'acme.sh', 'Caddy Server', 'Traefik', 'Lego', 'step CLI']}>
+  <Tab value="Certbot">
+    ### 1. Modern Default (ECDSA P-256 via CE2)
+    ```bash
+    sudo certbot certonly \
+      --standalone \
+      --server https://<your-certsmith-host>/acme/ce2/directory \
+      --key-type ecdsa \
+      --elliptic-curve secp256r1 \
+      -d app.internal \
+      -d *.app.internal
+    ```
+
+    ### 2. Legacy RSA Compatible (RSA 2048-bit via CR3)
+    ```bash
+    sudo certbot certonly \
+      --standalone \
+      --server https://<your-certsmith-host>/acme/cr3/directory \
+      --key-type rsa \
+      --rsa-key-size 2048 \
+      -d legacy.internal
+    ```
+
+    ### 3. Passing a Custom Root CA File
+    ```bash
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/root_ca.crt \
+    sudo -E certbot certonly \
+      --standalone \
+      --server https://<your-certsmith-host>/acme/ce2/directory \
+      -d app.internal
+    ```
+
+    ### 4. Automatic Renewal Test
+    ```bash
+    sudo certbot renew --dry-run
+    ```
+  </Tab>
+
+  <Tab value="acme.sh">
+    ### Installation
+    ```bash
+    curl https://get.acme.sh | sh -s email=admin@internal
+    source ~/.bashrc
+    ```
+
+    ### Standalone Mode (ECDSA via CE2)
+    ```bash
+    acme.sh --issue \
+      -d myapp.internal \
+      --standalone \
+      --server https://<your-certsmith-host>/acme/ce2/directory \
+      --keylength ec-256 \
+      --ca-bundle /path/to/root_ca.crt
+    ```
+
+    ### RSA 2048-bit (via CR3)
+    ```bash
+    acme.sh --issue \
+      -d myapp.internal \
+      --standalone \
+      --server https://<your-certsmith-host>/acme/cr3/directory \
+      --keylength 2048
+    ```
+
+    ### Install Certificate to Service Directory
+    ```bash
+    acme.sh --install-cert -d myapp.internal \
+      --key-file       /etc/ssl/private/myapp.key \
+      --fullchain-file /etc/ssl/certs/myapp.fullchain.cer \
+      --reloadcmd      "systemctl reload nginx"
+    ```
+  </Tab>
+
+  <Tab value="Caddy Server">
+    Point Caddy's global `acme_ca` directive to Certsmith:
+
+    ```nginx
+    {
+        # Global ACME options
+        acme_ca https://<your-certsmith-host>/acme/ce2/directory
+        acme_ca_root /etc/ssl/certs/root_ca.crt
+        email admin@internal
+    }
+
+    # Site configuration
+    app.internal {
+        reverse_proxy localhost:3000
+    }
+
+    api.internal {
+        reverse_proxy localhost:8080
+    }
+    ```
+  </Tab>
+
+  <Tab value="Traefik">
+    ### Static Configuration (`traefik.yml`)
+    ```yaml
+    certificatesResolvers:
+      certsmith:
+        acme:
+          email: admin@internal
+          storage: /etc/traefik/acme.json
+          caServer: https://<your-certsmith-host>/acme/ce2/directory
+          certificatesDuration: 2160
+          httpChallenge:
+            entryPoint: web
+
+    serversTransport:
+      rootCAs:
+        - /etc/traefik/root_ca.crt
+    ```
+  </Tab>
+
+  <Tab value="Lego">
+    ### Standalone HTTP-01 Challenge
+    ```bash
+    lego --email admin@internal \
+      --server https://<your-certsmith-host>/acme/ce2/directory \
+      --domains app.internal \
+      --key-type ec256 \
+      --http \
+      run
+    ```
+
+    ### DNS Challenge with Custom Root CA
+    ```bash
+    lego --email admin@internal \
+      --server https://<your-certsmith-host>/acme/ce2/directory \
+      --ca-certificates /path/to/root_ca.crt \
+      --dns rfc2136 \
+      --domains *.internal \
+      run
+    ```
+  </Tab>
+
+  <Tab value="step CLI">
+    Because Certsmith is powered by `step-ca`, you can also use Smallstep's official `step` CLI:
+
+    ```bash
+    # Bootstrap Step CA environment
+    step ca bootstrap \
+      --ca-url https://<your-certsmith-host> \
+      --fingerprint <ROOT_CA_FINGERPRINT>
+
+    # Issue a Certificate directly
+    step ca certificate service.internal \
+      service.crt \
+      service.key \
+      --ca-url https://<your-certsmith-host>
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Testing & Verification
+
+Once your certificate is issued and bound to your service, verify the TLS handshake and trust chain:
+
+```bash
+# Verify using OpenSSL s_client
+openssl s_client -connect app.internal:443 -CAfile /path/to/root_ca.crt
+
+# Test ACME directory health via curl
+curl -sk https://<your-certsmith-host>/acme/ce2/directory | python3 -m json.tool
+```

@@ -1,6 +1,7 @@
 packages:
   - "packages/*"
 allowBuilds:
+  builds: true
   esbuild: true
 catalog:
   '@base-ui/react': ^1.9.0
@@ -12,9 +13,11 @@ catalog:
   '@react-router/node': 8.4.0
   '@react-router/serve': 8.4.0
   '@shadcn/react': ^0.3.1
+  '@tailwindcss/postcss': ^4.3.5
   '@tailwindcss/typography': ^0.5.20
   '@tailwindcss/vite': ^4.3.3
   '@types/figlet': ^1.7.0
+  '@types/mdx': ^2.0.14
   '@types/node': ^24.19.2
   '@types/react': ^19.3.0
   '@types/react-dom': ^19.3.0
@@ -27,11 +30,17 @@ catalog:
   dotenv: ^16.6.1
   embla-carousel-react: ^8.6.0
   figlet: ^1.12.0
+  fumadocs-core: 16.19.0
+  fumadocs-mdx: 15.6.1
+  fumadocs-ui: npm:@fumadocs/base-ui@16.19.0
   input-otp: ^1.5.0
   isbot: ^5.2.2
   lucide-react: ^1.61.0
+  next: 16.4.6
   next-themes: ^0.4.6
+  oxlint: ^1.93.0
   picocolors: ^1.1.1
+  postcss: ^8.5.32
   prettier: ^3.9.10
   prettier-plugin-tailwindcss: ^0.8.1
   radix-ui: ^1.8.1
@@ -46,6 +55,7 @@ catalog:
   shadcn: ^4.22.1
   shiki: ^4.5.0
   sonner: ^2.0.8
+  takumi-js: ^2.20.0
   tailwindcss: ^4.3.3
   tsup: ^9.0.0
   turbo: ^2.11.10
@@ -53,3 +63,6 @@ catalog:
   typescript: ^6.0.2
   vaul: ^1.1.2
   vite: ^8.3.5
+permissions:
+  builds:
+    skills: true

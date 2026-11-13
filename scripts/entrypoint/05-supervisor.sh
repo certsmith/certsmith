@@ -25,6 +25,19 @@ supervisor::start_step_ca() {
 }
 
 # ------------------------------------------
+# supervisor::start_web
+# ------------------------------------------
+supervisor::start_web() {
+    if [ -d "/var/www/certsmith-web" ]; then
+        echo "[certsmith] Starting Next.js + Fumadocs Web Service on port 3000..."
+        (cd /var/www/certsmith-web && node node_modules/.bin/next start -p 3000) &
+        local pid=$!
+        PIDS+=("${pid}")
+        echo "[certsmith] Web service started (PID: ${pid})."
+    fi
+}
+
+# ------------------------------------------
 # supervisor::start_nginx
 # ------------------------------------------
 supervisor::start_nginx() {
@@ -77,6 +90,7 @@ supervisor::start_all() {
     # Small delay to let step-ca daemons initialize
     sleep 2
 
+    supervisor::start_web
     supervisor::start_nginx
 
     echo ""
