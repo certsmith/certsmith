@@ -1,0 +1,77 @@
+---
+title: Step-CA Cryptographic Engine
+description: Technical breakdown of CertSmith's integration with smallstep/certificates (Step-CA) and provisioner configuration.
+icon: Cpu
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+CertSmith utilizes **`step-ca`** (developed by Smallstep Labs) as its battle-tested, open-source core cryptographic signing engine. Step-CA provides native RFC 8555 implementation, fast in-memory key operations, and embedded persistent storage.
+
+---
+
+## Step-CA Process Architecture
+
+Inside the container appliance, each authority tier is backed by an independent Step-CA configuration context:
+
+- **Storage Engine**: Embedded BadgerDB (`data/step-ca/<tier>/db`), eliminating external database requirements (such as PostgreSQL or MySQL).
+- **Listening Socket**: Internal HTTP/TLS listener bound to loopback (`127.0.0.1:<port>`), accessible exclusively through Nginx.
+- **Master Key Encryption**: Intermediate CA private keys are password-encrypted on disk using generated strong passphrase files (`data/step-ca/<tier>/password.txt`).
+
+---
+
+## ACME Provisioner Configuration
+
+Each Step-CA instance exposes an **ACME Provisioner** configured with the following characteristics:
+
+```json title="ca.json"
+{
+  "root": "/app/data/root_ca.crt",
+  "federateRoots": [],
+  "crt": "/app/data/step-ca/ce2/intermediate_ca.crt",
+  "key": "/app/data/step-ca/ce2/intermediate_ca_key",
+  "address": "127.0.0.1:9002",
+  "dnsNames": ["ca.internal.lan"],
+  "db": {
+    "type": "badgerV2",
+    "dataSource": "/app/data/step-ca/ce2/db"
+  },
+  "authority": {
+    "provisioners": [
+      {
+        "type": "ACME",
+        "name": "acme-ce2",
+        "challenges": [
+          "http-01",
+          "dns-01"
+        ],
+        "claims": {
+          "minTLSCertDuration": "24h",
+          "maxTLSCertDuration": "2160h",
+          "defaultTLSCertDuration": "2160h"
+        }
+      }
+    ]
+  }
+}
+```
+
+### Key Provisioner Parameters
+- **`defaultTLSCertDuration`**: 2,160 hours (90 days).
+- **`minTLSCertDuration`**: 24 hours (for test certificates and dynamic ephemeral workloads).
+- **`challenges`**: Supports both `http-01` (webroot/standalone challenge) and `dns-01` (DNS TXT record validation).
+
+---
+
+## Challenge Validation Flow
+
+When an ACME client requests a certificate for domain `app.internal.lan`:
+
+1. Step-CA generates a cryptographic challenge token and authorization object.
+2. The ACME client writes the token to `http://app.internal.lan/.well-known/acme-challenge/<token>`.
+3. Step-CA dispatches an outgoing HTTP validation probe to `http://app.internal.lan/.well-known/acme-challenge/<token>`.
+4. Upon receiving the expected key authorization string, Step-CA marks the authorization as valid and proceeds to sign the leaf certificate.
+
+<Callout type="info">
+  Because challenge validation queries resolve using internal DNS, make sure your container appliance has access to the DNS server that resolves your internal domain names.
+</Callout>

@@ -1,0 +1,14 @@
+{
+  "title": "Reference",
+  "description": "CLI reference, environment variables, and troubleshooting guides",
+  "icon": "BookOpen",
+  "root": true,
+  "pages": [
+    "---Technical Reference---",
+    "index",
+    "cli",
+    "environment-variables",
+    "---Support & Diagnostics---",
+    "troubleshooting"
+  ]
+}

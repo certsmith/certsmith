@@ -1,0 +1,86 @@
+---
+title: Kubernetes cert-manager Integration
+description: Automate TLS certificates inside Kubernetes clusters using cert-manager and CertSmith ACME ClusterIssuers.
+icon: Boxes
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+[cert-manager](https://cert-manager.io/) is the industry-standard controller for managing certificates in Kubernetes. It automates issuance and renewal, mounting TLS secrets directly into Ingress resources and Pods.
+
+---
+
+## 1. Create Root CA ConfigMap / Secret
+
+First, store the CertSmith Root CA certificate inside Kubernetes so `cert-manager` can verify the ACME endpoint:
+
+```bash
+kubectl create secret generic certsmith-root-ca \
+  --namespace cert-manager \
+  --from-file=ca.crt=root_ca.crt
+```
+
+---
+
+## 2. Define an ACME ClusterIssuer
+
+Create a `ClusterIssuer` pointing to CertSmith's `CE2` ACME directory endpoint:
+
+<DynamicSnippet
+  title="certsmith-issuer.yaml"
+  template={`apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: certsmith-ce2
+spec:
+  acme:
+    server: {{ORIGIN}}/acme/ce2/directory
+    email: devops@internal.lan
+    privateKeySecretRef:
+      name: certsmith-account-key
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCg== # Base64 encoded root_ca.crt
+    solvers:
+      - http01:
+          ingress:
+            class: nginx`}
+/>
+
+<Callout type="tip">
+  You can supply `caBundle` directly as a base64-encoded string of `root_ca.crt` or reference the secret using `caBundleSecretRef` in newer cert-manager releases.
+</Callout>
+
+---
+
+## 3. Request Ingress TLS Automatically
+
+Annotate your Kubernetes `Ingress` resource with `cert-manager.io/cluster-issuer: certsmith-ce2`:
+
+```yaml title="ingress.yaml"
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: internal-app-ingress
+  namespace: default
+  annotations:
+    cert-manager.io/cluster-issuer: certsmith-ce2
+    ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - dashboard.internal.lan
+      secretName: dashboard-tls-secret
+  rules:
+    - host: dashboard.internal.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dashboard-service
+                port:
+                  number: 80
+```
+
+cert-manager will automatically create a `Certificate` request, fulfill the `HTTP-01` challenge via ingress routing rules, and populate the secret `dashboard-tls-secret` with the signed certificate chain and private key.

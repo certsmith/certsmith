@@ -1,0 +1,109 @@
+---
+title: Quickstart Guide
+description: Deploy CertSmith and issue your first automated TLS certificate in less than 5 minutes.
+icon: Zap
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps } from 'fumadocs-ui/components/steps';
+
+This guide walks you through launching the CertSmith appliance, installing the Root CA on your local machine, and requesting an automated TLS certificate using standard ACME clients.
+
+---
+
+<Steps>
+
+### Step 1: Start CertSmith Appliance
+
+Run CertSmith using Docker. Ensure ports 80 and 443 are mapped:
+
+```bash
+docker run -d \
+  --name certsmith \
+  --restart unless-stopped \
+  -p 80:80 \
+  -p 443:443 \
+  -v certsmith-data:/app/data \
+  -e CERTSMITH_DOMAIN=ca.internal.lan \
+  certsmith/certsmith:latest
+```
+
+<Callout type="info">
+  This documentation dynamically adapts code snippets to your active host (<code className="text-fd-primary font-mono"><DynamicHost /></code>). When deploying Docker, set `CERTSMITH_DOMAIN` to your intended production domain or IP address.
+</Callout>
+
+### Step 2: Download & Install Root CA
+
+Clients connecting to your internal services must trust the Root CA that CertSmith generates on first boot.
+
+Fetch the root certificate directly from the running appliance:
+
+<RootCaDownloadSnippet />
+
+Install it in your local operating system trust store:
+
+<Tabs items={['Debian / Ubuntu', 'RHEL / Fedora', 'macOS', 'Windows (PowerShell)']}>
+  <Tab value="Debian / Ubuntu">
+    ```bash
+    sudo cp root_ca.crt /usr/local/share/ca-certificates/certsmith-root.crt
+    sudo update-ca-certificates
+    ```
+  </Tab>
+  <Tab value="RHEL / Fedora">
+    ```bash
+    sudo cp root_ca.crt /etc/pki/ca-trust/source/anchors/certsmith-root.crt
+    sudo update-ca-trust extract
+    ```
+  </Tab>
+  <Tab value="macOS">
+    ```bash
+    sudo security add-trusted-cert -d -r trustRoot \
+      -k /Library/Keychains/System.keychain root_ca.crt
+    ```
+  </Tab>
+  <Tab value="Windows (PowerShell)">
+    ```powershell
+    Import-Certificate -FilePath .\root_ca.crt -CertStoreLocation Cert:\LocalMachine\Root
+    ```
+  </Tab>
+</Tabs>
+
+### Step 3: Issue Your First Certificate
+
+With the root certificate trusted, you can now request TLS certificates via ACME. Here is a practical example using **Certbot** in standalone mode using the default **CE2** tier (ECDSA P-256):
+
+<DynamicSnippet
+  title="Issue Certificate via Certbot (CE2 ECDSA)"
+  template={`sudo certbot certonly \\
+  --standalone \\
+  --server {{ORIGIN}}/acme/ce2/directory \\
+  --key-type ecdsa \\
+  --elliptic-curve secp256r1 \\
+  -d myapp.internal.lan`}
+/>
+
+Certbot will negotiate with CertSmith via ACME v2, solve the HTTP-01 or standalone challenge, and store your certificate and private key in `/etc/letsencrypt/live/myapp.internal.lan/`.
+
+### Step 4: Verify the Issued Certificate
+
+Verify that the certificate chains back properly to your CertSmith root:
+
+```bash
+openssl x509 -in /etc/letsencrypt/live/myapp.internal.lan/cert.pem -text -noout | grep -E "Issuer|Subject|Not After"
+```
+
+You should see:
+- **Issuer**: `CertSmith Intermediate CE2 CA`
+- **Subject**: `CN = myapp.internal.lan`
+
+</Steps>
+
+---
+
+## Next Steps
+
+Now that you have a functioning ACME workflow, explore the specialized guides:
+- [ACME Clients Configuration](/docs/acme-clients) for Caddy, Traefik, Lego, and cert-manager.
+- [PKI Cryptographic Tiers](/docs/architecture/hierarchy) to choose between RSA and ECDSA curve sizes.
+- [Trust Store Automation](/docs/operations/trust-store) to distribute the Root CA across container fleets.

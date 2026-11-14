@@ -1,0 +1,70 @@
+---
+title: Operations Overview
+description: Operational principles, deployment patterns, and day-to-day management of the CertSmith appliance.
+icon: SlidersHorizontal
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Card, Cards } from 'fumadocs-ui/components/card';
+
+Operating an internal Certificate Authority requires attention to availability, persistent storage integrity, and trust store distribution across your fleet.
+
+---
+
+## Operational Responsibilities
+
+```
+                                CertSmith Appliance
+                                ┌─────────────────┐
+               ┌───────────────►│  Health Status  │
+               │                │   • /healthz    │
+               │                └─────────────────┘
+               │
+┌──────────────┴──────────────┐ ┌─────────────────┐
+│     Operator Workflow       ├►│   Data Backup   │
+│ • Provision Appliance       │ │   • /app/data   │
+│ • Distribute Root CA        │ └─────────────────┘
+│ • Rotate Intermediate Keys  │
+│ • Monitor Issuance & ACME   │ ┌─────────────────┐
+└──────────────┬──────────────┘►│ Key Management  │
+               │                │ • CA Rotation   │
+               │                └─────────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│ Client Fleet (Servers/Devs) │
+│ • Trust Store Anchors       │
+│ • Auto-renewing Agents      │
+└─────────────────────────────┘
+```
+
+### 1. Persistent Storage
+All cryptographic keys, certificates, BadgerDB state, and ACME account databases live under `/app/data`. It is essential that this directory is backed by a durable, persistent Docker volume or bind mount with appropriate backup schedules.
+
+### 2. Fleet Trust Distribution
+End users and microservices must have the CertSmith Root CA installed in their trust stores before they can consume issued certificates without warnings. Trust distribution should be integrated into:
+- Ansible playbooks or Puppet/Chef recipes for bare-metal and VMs.
+- Docker base images or Kubernetes startup DaemonSets.
+- Windows Active Directory Group Policy Objects (GPOs) for office workstations.
+
+### 3. Key Rotation & Expiry Management
+While end-entity certificates renew automatically every 60–90 days via ACME, the intermediate CAs (valid for 3 years) and Root CA (valid for 10 years) require planned lifecycle rotations.
+
+---
+
+## Operations Topics
+
+<Cards>
+  <Card title="Docker Compose Deployment" href="/docs/operations/docker-compose">
+    Standard production configuration with volumes, environment variables, and healthchecks.
+  </Card>
+  <Card title="Trust Store Distribution" href="/docs/operations/trust-store">
+    Detailed installation instructions for Linux, macOS, Windows, iOS, Android, Docker, and language runtimes.
+  </Card>
+  <Card title="Key Rotation Procedures" href="/docs/operations/key-rotation">
+    Step-by-step instructions for rotating intermediate keys without breaking active clients.
+  </Card>
+  <Card title="Monitoring & Healthchecks" href="/docs/operations/monitoring-health">
+    Monitor service health, Step-CA process states, and ACME metrics.
+  </Card>
+</Cards>

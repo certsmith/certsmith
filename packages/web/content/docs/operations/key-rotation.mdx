@@ -1,0 +1,73 @@
+---
+title: Key Rotation & Authority Lifecycle
+description: Step-by-step procedures for rotating Intermediate CA keys and managing the Root CA lifecycle without service disruption.
+icon: RefreshCw
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Steps } from 'fumadocs-ui/components/steps';
+
+Cryptographic hygiene mandates periodic rotation of signing keys. CertSmith simplifies intermediate CA rotation while allowing clients to continue renewing without disruption.
+
+---
+
+## Authority Lifecycle Schedule
+
+| Authority Entity | Default Validity | Recommended Rotation Period | Impact on Clients |
+| :--- | :--- | :--- | :--- |
+| **End-Entity (Leaf) Certificates** | 90 days | Automatic renewal at 60 days | Zero (Handled automatically by ACME clients) |
+| **Intermediate CAs (CE/CR Tiers)** | 3 years | Every 18–24 months | Zero (Clients download new chain automatically via ACME) |
+| **Root Certificate Authority** | 10 years | Every 7–8 years | High (Requires redistributing new Root CA to all trust stores) |
+
+---
+
+## Rotating an Intermediate CA Tier
+
+Because client trust is anchored to the **Root CA**, rotating an intermediate CA tier (such as CE2) does **not** require re-installing root certificates on client devices.
+
+<Steps>
+
+### Step 1: Execute Tier Rotation Tool
+
+CertSmith includes an internal rotation tool located in `/app/tools/rotate-tier.sh`. Execute the rotation from your host or container shell:
+
+```bash
+docker exec -it certsmith /app/tools/rotate-tier.sh ce2
+```
+
+This script:
+1. Generates a new private key for the intermediate authority (`intermediate_ca_key.new`).
+2. Generates a Certificate Signing Request (CSR).
+3. Signs the CSR using the local Root CA key, producing `intermediate_ca.crt.new`.
+4. Gracefully replaces the existing keys and intermediate certificate bundle.
+
+### Step 2: Signal Step-CA Reload
+
+Reload the affected Step-CA daemon to pick up the new intermediate credentials without dropping active ACME connections:
+
+```bash
+docker exec -it certsmith supervisorctl restart step-ca:ce2
+```
+
+### Step 3: Verify the New Intermediate Fingerprint
+
+Check the Trust Portal UI at <code className="text-fd-primary font-mono"><DynamicOrigin /></code> or inspect the certificate via OpenSSL:
+
+```bash
+openssl x509 -in /app/data/step-ca/ce2/intermediate_ca.crt -noout -dates -fingerprint
+```
+
+Next time ACME clients renew their certificates, they will receive leaf certificates signed by the new intermediate key along with the updated intermediate certificate chain.
+
+</Steps>
+
+---
+
+## Root CA Rotation (Cross-Signing)
+
+When the Root CA approaches the end of its 10-year lifespan:
+
+1. **Generate New Root CA (Root-2)**: Generate a new root keypair.
+2. **Cross-Sign Root-2 with Root-1**: Sign the new Root-2 with the old Root-1 key. This creates a bridge certificate that allows clients that only trust Root-1 to trust certificates issued under Root-2.
+3. **Gradual Distribution**: Deploy Root-2 to all server fleets and workstations over a transition period.
+4. **Decommission Root-1**: Once 100% of the fleet trusts Root-2, retire Root-1.

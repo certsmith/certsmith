@@ -1,0 +1,107 @@
+---
+title: Production Docker Compose
+description: Deploy and operate CertSmith using production-ready Docker Compose configurations with persistent storage and resource constraints.
+icon: Container
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+Docker Compose is the recommended deployment method for running CertSmith on standalone servers, homelab hypervisors, and private cloud virtual machines.
+
+---
+
+## Production `docker-compose.yml`
+
+Create a dedicated directory `/opt/certsmith/` and save the following file:
+
+```yaml title="docker-compose.yml"
+services:
+  certsmith:
+    image: certsmith/certsmith:latest
+    container_name: certsmith
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - CERTSMITH_DOMAIN=ca.internal.lan
+      - CERTSMITH_ORGANIZATION=CertSmith Private Trust
+      - CERTSMITH_ADMIN_EMAIL=security@internal.lan
+      - TZ=UTC
+    volumes:
+      - certsmith_data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsk https://localhost/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2048M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+volumes:
+  certsmith_data:
+    name: certsmith_production_data
+```
+
+---
+
+## Starting the Service
+
+Launch the stack in detached mode:
+
+```bash
+docker compose up -d
+```
+
+View startup initialization and certificate generation logs:
+
+```bash
+docker compose logs -f
+```
+
+---
+
+## Backup and Restoration
+
+### Automated Backup Script
+
+Back up the persistent volume while preserving file permissions and extended attributes:
+
+```bash title="backup-certsmith.sh"
+#!/usr/bin/env bash
+set -euo pipefail
+
+BACKUP_DIR="/var/backups/certsmith"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+mkdir -p "$BACKUP_DIR"
+
+echo "Creating atomic snapshot of CertSmith data..."
+docker run --rm \
+  -v certsmith_production_data:/volume:ro \
+  -v "$BACKUP_DIR":/backup \
+  alpine:latest \
+  tar -czf "/backup/certsmith_backup_${TIMESTAMP}.tar.gz" -C /volume .
+
+echo "Backup complete: ${BACKUP_DIR}/certsmith_backup_${TIMESTAMP}.tar.gz"
+```
+
+### Restoration Procedure
+
+To restore data from a previous backup tarball:
+
+```bash
+docker compose stop
+docker run --rm \
+  -v certsmith_production_data:/volume \
+  -v /var/backups/certsmith:/backup:ro \
+  alpine:latest \
+  sh -c "rm -rf /volume/* && tar -xzf /backup/certsmith_backup_TARGET.tar.gz -C /volume"
+docker compose start
+```

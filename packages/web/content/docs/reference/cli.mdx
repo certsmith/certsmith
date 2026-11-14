@@ -1,0 +1,155 @@
+---
+title: CLI Reference
+description: Complete command-line interface documentation for the unified certsmith CLI hub.
+icon: Terminal
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+The `@certsmith/cli` provides a unified hub for managing Docker containers, inspecting PKI certificate chains, checking Step-CA status, syncing Cloudflare Zero Trust SaaS hostnames, and configuring the appliance.
+
+---
+
+## Installation & Global Options
+
+### Global Flags
+```bash
+certsmith [command] [options]
+```
+
+- `-c, --config <path>`: Custom path to a configuration file (`config.jsonc`).
+- `-i, --interactive`: Explicitly launch the interactive terminal prompt menu.
+- `-V, --version`: Output the version number.
+- `-h, --help`: Display help for command.
+
+---
+
+## Interactive Hub (`certsmith interactive`)
+
+Launch the terminal UI wizard:
+
+```bash
+certsmith interactive
+# Alias:
+certsmith ui
+```
+
+---
+
+## System Health (`certsmith health`)
+
+Run a comprehensive health audit across Docker container state, all 6 Step-CA tiers, and PKI certificate expiry:
+
+```bash
+certsmith health
+```
+
+---
+
+## Cloudflare Group (`certsmith cf`)
+
+Manage Cloudflare Zero Trust Tunnel ingress rules and SaaS Custom Hostnames:
+
+```bash
+# Sync domains to Cloudflare SaaS and enforce strict tunnel TLS
+certsmith cf sync
+
+# List all custom hostnames registered on Cloudflare SaaS
+certsmith cf list
+
+# View active Cloudflare tunnel ingress rules
+certsmith cf tunnel
+```
+
+---
+
+## Step-CA Group (`certsmith ca`)
+
+Manage internal Step-CA daemon tiers:
+
+```bash
+# Check the operational health of all 6 step-ca tiers
+certsmith ca health
+
+# List active provisioners for a tier (cr1, cr2, cr3, ce1, ce2, ce3)
+certsmith ca provisioners ce2
+
+# Revoke a certificate for a specific tier
+certsmith ca revoke ce2
+```
+
+---
+
+## Docker Group (`certsmith docker`)
+
+Control the lifecycle of the CertSmith container:
+
+```bash
+# Check container status and Docker healthcheck state
+certsmith docker status
+
+# Restart the certsmith container gracefully
+certsmith docker restart
+
+# Build the Docker image from local source
+certsmith docker build .
+
+# Stream real-time logs from the container (default: 100 lines)
+certsmith docker logs 200
+```
+
+---
+
+## PKI Operations Group (`certsmith pki`)
+
+Inspect and execute cryptographic maintenance tasks:
+
+```bash
+# Audit expiry dates of Root CA and all intermediate authority certificates
+certsmith pki audit
+
+# Verify OpenSSL certificate chain integrity from root to intermediates
+certsmith pki verify
+
+# Renew the portal TLS leaf certificate
+certsmith pki renew-portal
+
+# Rotate an intermediate authority key and certificate
+certsmith pki rotate
+
+# Trigger an offline Root CA forge ceremony
+certsmith pki ceremony
+```
+
+---
+
+## Configuration Group (`certsmith config`)
+
+Manage local and global CLI configurations:
+
+```bash
+# Initialize starter configuration file
+certsmith config init [--global]
+
+# Show active and discovered configuration file paths
+certsmith config path
+
+# Get a configuration value (or print full config)
+certsmith config get cloudflare.accountId
+
+# Set a configuration key value
+certsmith config set cloudflare.accountId "your-account-id" [--global]
+```
+
+---
+
+## Authentication Wizard (`certsmith login`)
+
+Authenticate with Cloudflare using a browser-based setup wizard:
+
+```bash
+certsmith login
+
+# Headless / SSH mode (prints URL instead of opening a local browser)
+certsmith login --no-browser
+```

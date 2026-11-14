@@ -1,0 +1,104 @@
+---
+title: Introduction to CertSmith
+description: Enterprise-grade private Automated Certificate Management Environment (ACME) CA appliance for local networks, homelabs, and private clouds.
+icon: Compass
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Card, Cards } from 'fumadocs-ui/components/card';
+import { ShieldCheck, Cpu, Terminal, Key, Workflow } from 'lucide-react';
+
+**CertSmith** is an enterprise-ready, containerized private Certificate Authority (CA) designed to automate TLS/SSL certificate issuance and renewal across private infrastructure, homelabs, staging environments, and Kubernetes clusters using the standard **ACME v2 (RFC 8555)** protocol.
+
+Operating as a private alternative to Let's Encrypt, CertSmith eliminates self-signed certificate warnings and complex manual OpenSSL configurations by providing standard ACME endpoints backed by multi-tier Intermediate Authorities.
+
+---
+
+## Why CertSmith?
+
+In modern cloud-native architectures, securing machine-to-machine traffic with TLS is non-negotiable. However, public CAs like Let's Encrypt require public DNS control or publicly exposed HTTP endpoints, which is often infeasible or insecure for private infrastructure, internal domains (`.internal`, `.local`, `.corp`), and isolated air-gapped environments.
+
+CertSmith solves this problem with:
+
+- **Full ACME v2 Protocol Compliance**: Compatible with any industry-standard ACME client (Certbot, Caddy, Traefik, Lego, acme.sh, and Kubernetes `cert-manager`).
+- **Cryptographic Tiering (6 CAs)**: 3 Modern Elliptic Curve (ECDSA P-256, P-384, P-521) tiers and 3 RSA (2048, 3072, 4096-bit) tiers running simultaneously.
+- **Embedded Web Trust Portal**: Intuitive web dashboard providing real-time health checks, intermediate CA status, quick client configuration snippets, and one-click Root CA certificate downloads.
+- **Turnkey Container Appliance**: Packaged as a lightweight, zero-maintenance Docker container powered by Step-CA, Nginx, and an ultra-fast Next.js management web layer.
+- **Zero-Friction Trust Establishment**: Single Root CA distribution anchors trust across all 6 intermediate tiers, simplifying fleet-wide certificate deployment.
+
+---
+
+## System Architecture at a Glance
+
+CertSmith is structured around a resilient two-tier PKI model:
+
+```
+                  ┌────────────────────────┐
+                  │   CertSmith Root CA    │
+                  │   (Long-Lived Anchor)  │
+                  └───────────┬────────────┘
+                              │
+       ┌──────────────────────┴──────────────────────┐
+       │                                             │
+┌──────▼─────────────────────┐        ┌──────────────▼─────────────┐
+│  ECC Family Intermediates  │        │   RSA Family Intermediates  │
+│  • CE1 (ECDSA P-384)       │        │   • CR1 (RSA 4096-bit)      │
+│  • CE2 (ECDSA P-256) [STD] │        │   • CR2 (RSA 3072-bit)      │
+│  • CE3 (ECDSA P-521)       │        │   • CR3 (RSA 2048-bit) [LEG]│
+└──────────────┬─────────────┘        └──────────────┬─────────────┘
+               │                                     │
+               └──────────────────┬──────────────────┘
+                                  │
+                  ┌───────────────▼──────────────┐
+                  │      Nginx Reverse Proxy     │
+                  │    & ACME v2 API Endpoints   │
+                  └───────────────┬──────────────┘
+                                  │
+         ┌────────────────────────┼────────────────────────┐
+         ▼                        ▼                        ▼
+┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
+│ Certbot / acme.sh│    │ Caddy / Traefik  │    │  K8s cert-manager│
+│ (Virtual Hosts)  │    │ (Edge Proxies)   │    │ (Cluster TLS)    │
+└──────────────────┘    └──────────────────┘    └──────────────────┘
+```
+
+---
+
+## Documentation Navigation
+
+Explore our detailed guides organized into specialized sections:
+
+<Cards>
+  <Card
+    title="Quickstart Guide"
+    href="/docs/quickstart"
+    icon={<Workflow className="size-5" />}
+  >
+    Get CertSmith up and running and issue your first TLS certificate in under 5 minutes.
+  </Card>
+  <Card
+    title="PKI Architecture"
+    href="/docs/architecture"
+    icon={<Key className="size-5" />}
+  >
+    Understand the root hierarchy, intermediate tiers, cryptographic algorithms, and security boundaries.
+  </Card>
+  <Card
+    title="ACME Clients"
+    href="/docs/acme-clients"
+    icon={<Terminal className="size-5" />}
+  >
+    Configuration guides for Certbot, Lego, acme.sh, Caddy, Traefik, and Kubernetes cert-manager.
+  </Card>
+  <Card
+    title="Operations & Trust Store"
+    href="/docs/operations"
+    icon={<ShieldCheck className="size-5" />}
+  >
+    Fleet distribution of root certificates, key rotation, container management, and monitoring.
+  </Card>
+</Cards>
+
+<Callout type="info">
+  To download the appliance's Root CA certificate directly, visit [`/root_ca.crt`](/root_ca.crt) or navigate to the [Trust Portal](/).
+</Callout>

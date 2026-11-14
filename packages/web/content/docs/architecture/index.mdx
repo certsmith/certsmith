@@ -1,0 +1,74 @@
+---
+title: System Architecture
+description: Comprehensive overview of CertSmith's runtime architecture, service orchestration, and network design.
+icon: Layers
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+CertSmith combines battle-tested cryptographic primitives with high-performance networking and a modern web management interface inside a unified container appliance.
+
+---
+
+## Architectural Breakdown
+
+The appliance runs multiple cooperating internal processes managed by a central supervisor daemon:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        CertSmith Appliance Container                   │
+│                                                                        │
+│   Port 80 (HTTP) ────────┐                                             │
+│   Port 443 (HTTPS) ──────┼──────► [ Nginx Edge Ingress Proxy ]         │
+│                          │            │                  │             │
+│                          │     /      │          /acme/  │   /api/     │
+│                          │            ▼                  ▼             │
+│                          │     [ Next.js Web ]    [ Step-CA Cluster ]  │
+│                          │     • Trust Portal     • CE1, CE2, CE3      │
+│                          │     • Docs Engine      • CR1, CR2, CR3      │
+│                          │     • Health Status    • BadgerDB Storage   │
+│                          │                                             │
+│                          └──────► [ Certsmith Supervisor Daemon ]      │
+│                                   • Process Health & Auto-restart      │
+│                                   • Certificate Auto-generation        │
+│                                   • Signal Handling                    │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### 1. Ingress & Routing Layer (Nginx)
+- **TLS Termination & Portal Security**: Terminates incoming HTTPS connections for the web interface and ACME APIs.
+- **Path-Based Reverse Proxy**:
+  - `/`: Routes to the Next.js Trust Portal and technical documentation.
+  - `/root_ca.crt`: Serves the public Root CA certificate directly with `Content-Type: application/x-x509-ca-cert`.
+  - `/acme/<tier>/*`: Proxies ACME protocol requests to the designated backend Step-CA instance on localhost.
+  - `/healthz`: Exposes JSON health statuses of all internal services.
+
+### 2. Cryptographic Core Layer (Step-CA Engine)
+- CertSmith runs isolated `step-ca` daemon instances, one per tier (or dedicated multi-provisioner configurations).
+- **Embedded Database (BadgerDB)**: Stores active ACME accounts, issued certificate serials, authorizations, and challenge tokens with ACID consistency.
+- **Ephemeral ACME Provisioner**: Enforces domain validation policies, challenge validation timeouts, and certificate issuance parameters.
+
+### 3. Application & Management Layer (Next.js & Fumadocs)
+- Provides the responsive web user interface (Trust Portal).
+- Displays active CA status, cryptographic fingerprints, validity periods, and quick copy-paste client setup commands.
+- Hosts this extensive technical documentation directly inside the appliance.
+
+### 4. Process Supervisor
+- Initializes the file system and generates all certificates automatically on first boot.
+- Monitors child processes (`nginx`, `step-ca`, and `node`) to ensure high availability and self-healing.
+- Handles clean shutdown signals (`SIGTERM`, `SIGINT`) to prevent database corruption.
+
+---
+
+## Network Ingress & Port Mapping
+
+CertSmith requires two primary external ports:
+
+| Container Port | Protocol | Purpose | External Binding |
+| :--- | :--- | :--- | :--- |
+| `80` | HTTP | ACME HTTP-01 challenge validation and HTTP-to-HTTPS redirect | Port 80 on Host |
+| `443` | HTTPS | ACME v2 Directory API and Web Trust Portal | Port 443 on Host |
+
+<Callout type="warn">
+  For ACME `HTTP-01` challenge validation to work with standalone or webroot clients, port 80 must be reachable from the client or edge proxy.
+</Callout>

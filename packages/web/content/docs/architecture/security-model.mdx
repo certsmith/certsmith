@@ -1,0 +1,65 @@
+---
+title: Security Model & Threat Boundaries
+description: Cryptographic boundaries, file permission models, access controls, and security recommendations for CertSmith deployments.
+icon: Shield
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+CertSmith is designed with a defense-in-depth posture suitable for zero-trust private networks and homelab environments.
+
+---
+
+## Trust Boundaries
+
+```
+[ External / Host Network ]
+             │
+   ══════════╪══════════════════════════════════════════════════ [ Boundary 1: Network Ingress ]
+             ▼
+   [ Nginx Reverse Proxy (Port 80/443) ]
+             │
+   ══════════╪══════════════════════════════════════════════════ [ Boundary 2: Loopback Isolation ]
+             ▼
+   [ Step-CA Daemons (127.0.0.1:9001-9006) ]
+             │
+   ══════════╪══════════════════════════════════════════════════ [ Boundary 3: File System Security ]
+             ▼
+   [ /app/data Volume ]
+   ├── root_ca.crt (0644 - Public)
+   ├── root_ca_key (0600 - Strict Root Key)
+   └── step-ca/
+       └── <tier>/
+           ├── intermediate_ca.crt (0644 - Public)
+           ├── intermediate_ca_key (0600 - Private Key)
+           └── password.txt (0600 - Key Encryption Passphrase)
+```
+
+### 1. Ingress Boundary
+- External clients never communicate directly with `step-ca` daemons.
+- All ingress traffic is filtered and sanitized by Nginx.
+- Nginx blocks invalid paths, drops oversized headers, enforces strict HTTP methods, and limits ACME rate abuse.
+
+### 2. Loopback Boundary
+- Step-CA daemons bind strictly to localhost (`127.0.0.1`).
+- Port scanning or direct attacks from neighboring host network containers cannot reach the raw Step-CA administrative APIs.
+
+### 3. File System & Key Permission Boundary
+- All private keys are stored with strict POSIX permissions:
+  - Directories: `0700` (`drwx------`)
+  - Private key files: `0600` (`-rw-------`)
+  - Root CA private key: generated with restricted permissions owned by the internal service account.
+- In high-security environments, the Root CA private key can be exported to offline cold storage and purged from the running container once intermediate CAs have been forged.
+
+---
+
+## Security Hardening Best Practices
+
+<Callout type="warn">
+  Never expose CertSmith's ports directly to the public internet without an external authentication proxy or VPN (such as WireGuard, Tailscale, or Cloudflare Access).
+</Callout>
+
+1. **Volume Encryption**: Ensure the host directory or Docker volume backing `/app/data` resides on an encrypted file system (e.g., LUKS, ZFS native encryption, or AWS EBS Encrypted Volumes).
+2. **DNS Validation Security**: When using `DNS-01` challenges, grant your ACME clients limited-scope API tokens capable only of managing TXT records for the designated ACME challenge subdomains.
+3. **Internal Network Segmentation**: Place CertSmith in an isolated management VLAN or Docker bridge network accessible only to reverse proxies, servers, and administrators.
+4. **Regular Backups**: Back up the `/app/data` directory securely to an encrypted offsite location. The database contains serial counters and ACME account identifiers necessary for continuity.

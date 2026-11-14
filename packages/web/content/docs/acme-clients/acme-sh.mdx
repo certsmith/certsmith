@@ -1,0 +1,73 @@
+---
+title: acme.sh Configuration
+description: Deploy certificates using acme.sh, an ultra-lightweight zero-dependency POSIX shell script ACME client.
+icon: Terminal
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+[acme.sh](https://github.com/acmesh-official/acme.sh) is a pure shell implementation of the ACME client protocol with zero external package dependencies. It is popular on routers, OpenWrt, embedded Linux, and minimal container images.
+
+---
+
+## 1. Installation
+
+Install acme.sh with a single command:
+
+```bash
+curl https://get.acme.sh | sh -s email=admin@internal.lan
+source ~/.bashrc
+```
+
+---
+
+## 2. Standalone Mode Issuance
+
+Request a certificate using the built-in standalone port listener:
+
+<DynamicSnippet
+  title="acme.sh Standalone (CE2 ECDSA)"
+  template={`acme.sh --issue \\
+  --standalone \\
+  --server {{ORIGIN}}/acme/ce2/directory \\
+  --ca-bundle /path/to/root_ca.crt \\
+  -d app.internal.lan \\
+  --keylength ec-256`}
+/>
+
+---
+
+## 3. Webroot Mode (Nginx / Apache)
+
+<DynamicSnippet
+  title="acme.sh Webroot Mode"
+  template={`acme.sh --issue \\
+  -d app.internal.lan \\
+  -w /var/www/html \\
+  --server {{ORIGIN}}/acme/ce2/directory \\
+  --ca-bundle /path/to/root_ca.crt \\
+  --keylength ec-256`}
+/>
+
+---
+
+## 4. Installing Certificate to Target Directory
+
+Do not reference files directly inside the `~/.acme.sh/` directory in your web servers. Instead, use the `install-cert` command, which configures permanent copy paths and reload triggers:
+
+```bash
+acme.sh --install-cert -d app.internal.lan --ecc \
+  --key-file       /etc/nginx/ssl/app.internal.lan.key \
+  --fullchain-file /etc/nginx/ssl/app.internal.lan.fullchain.pem \
+  --reloadcmd     "systemctl reload nginx"
+```
+
+---
+
+## 5. Automated Cron Renewal
+
+`acme.sh` automatically installs a daily cron job. You can verify active renewal tasks at any time:
+
+```bash
+acme.sh --list
+```

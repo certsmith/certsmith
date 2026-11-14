@@ -1,0 +1,81 @@
+---
+title: Traefik Ingress Configuration
+description: Configure Traefik Proxy to automatically manage TLS certificates via CertSmith ACME endpoints for Docker and Kubernetes workloads.
+icon: Network
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+[Traefik](https://traefik.io/traefik/) is a leading cloud-native application proxy that discovers routes and manages TLS certificates dynamically through Docker labels or Kubernetes CRDs.
+
+---
+
+## 1. Traefik Static Configuration (YAML)
+
+Configure an ACME certificate resolver in `traefik.yml`. Point the `caServer` to your desired CertSmith directory, and specify `rootCAs` so Traefik trusts the CertSmith Root CA:
+
+<DynamicSnippet
+  title="traefik.yml"
+  template={`entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+
+  websecure:
+    address: ":443"
+
+certificatesResolvers:
+  certsmith:
+    acme:
+      email: admin@internal.lan
+      storage: /etc/traefik/acme.json
+      caServer: {{ORIGIN}}/acme/ce2/directory
+      keyType: EC256
+      httpChallenge:
+        entryPoint: web
+
+# Mount Root CA in Traefik trust anchor
+serversTransport:
+  rootCAs:
+    - /etc/traefik/certs/root_ca.crt`}
+/>
+
+---
+
+## 2. Docker Compose Deployment with Traefik Labels
+
+Here is an example `docker-compose.yml` deploying Traefik and an application service:
+
+```yaml title="docker-compose.yml"
+services:
+  traefik:
+    image: traefik:v3.1
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./root_ca.crt:/etc/traefik/certs/root_ca.crt:ro
+      - traefik-acme:/etc/traefik
+
+  whoami:
+    image: traefik/whoami
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.internal.lan`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      - "traefik.http.routers.whoami.tls=true"
+      - "traefik.http.routers.whoami.tls.certresolver=certsmith"
+
+volumes:
+  traefik-acme:
+```
+
+Traefik will dynamically detect the `whoami` container, contact CertSmith, validate the challenge over HTTP-01 on entrypoint `web`, and serve valid TLS on `https://whoami.internal.lan/`.

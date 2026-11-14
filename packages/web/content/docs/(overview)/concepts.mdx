@@ -1,0 +1,87 @@
+---
+title: Foundational Concepts
+description: Essential principles of Public Key Infrastructure (PKI), the RFC 8555 ACME protocol, and CertSmith's architectural design.
+icon: BookOpen
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+Understanding the mechanics of Public Key Infrastructure (PKI) and automated certificate management helps you optimize security and resilience across your private networks.
+
+---
+
+## What is an ACME Certificate Authority?
+
+The **Automated Certificate Management Environment (ACME)** protocol, formalized in **RFC 8555**, defines an extensible framework for automating certificate lifecycle management:
+1. **Account Registration**: A client creates a cryptographic account on the ACME server identified by an asymmetric key pair.
+2. **Order Placement**: The client submits a certificate order for one or more Domain Names (FQDNs).
+3. **Challenges & Authorization**: The ACME server challenges the client to prove ownership of the requested domain (e.g., via `HTTP-01`, `TLS-ALPN-01`, or `DNS-01`).
+4. **Finalization & Issuance**: Once authorized, the client submits a Certificate Signing Request (CSR), and the CA signs and returns the full certificate chain.
+
+```
+Client (e.g. Certbot)                  CertSmith ACME Server
+        │                                        │
+        ├──────── POST /new-account ────────────►│
+        │◄─────── 201 Created (Account) ─────────┤
+        │                                        │
+        ├──────── POST /new-order ──────────────►│
+        │◄─────── 201 Created (Challenges) ──────┤
+        │                                        │
+        │  [Client configures HTTP-01 / DNS-01]  │
+        ├──────── POST /challenge ──────────────►│
+        │                                        ├─ Verify Challenge ─┐
+        │                                        │◄───────────────────┘
+        │◄─────── 200 OK (Status: valid) ────────┤
+        │                                        │
+        ├──────── POST /finalize (CSR) ─────────►│
+        │                                        ├─ Sign Certificate ─┐
+        │                                        │◄───────────────────┘
+        │◄─────── 200 OK (Location: /cert/xxx) ──┤
+        │                                        │
+        ├──────── GET /cert/xxx ────────────────►│
+        │◄─────── 200 OK (Certificate Chain) ────┤
+```
+
+---
+
+## Root CA vs. Intermediate CA
+
+A secure PKI hierarchy enforces strict role separation between the **Root CA** and **Issuing (Intermediate) CAs**:
+
+### 1. Root Certificate Authority
+- **Purpose**: The ultimate cryptographic trust anchor.
+- **Lifetime**: Typically 10 to 20 years.
+- **Operational Rule**: Kept offline or strictly isolated. It never signs end-entity web certificates directly; its sole responsibility is signing Intermediate CAs and Certificate Revocation Lists (CRLs).
+- **Client Impact**: Must be manually or centrally installed in the operating system or application trust store.
+
+### 2. Intermediate Certificate Authorities
+- **Purpose**: Online issuing authorities that handle day-to-day ACME transactions.
+- **Lifetime**: Typically 1 to 5 years.
+- **Operational Rule**: Online and continuously processing signing requests from authenticated or authorized ACME clients.
+- **Client Impact**: Clients do not need to install intermediate certificates in their root trust stores; web servers transmit the intermediate certificate along with the leaf certificate during the TLS handshake.
+
+---
+
+## Cryptographic Families in CertSmith
+
+CertSmith operates two concurrent cryptographic families:
+
+### Elliptic Curve Cryptography (ECC / ECDSA)
+- **Advantages**: Smaller key sizes (e.g., 256 bits vs 2048 bits for RSA), significantly faster cryptographic handshakes, and reduced network payload.
+- **Standard**: Recommended for all modern web browsers, microservices, gRPC channels, and containerized workloads.
+- **Tiers**: `CE1` (P-384), `CE2` (P-256 - default), and `CE3` (P-521).
+
+### Rivest–Shamir–Adleman (RSA)
+- **Advantages**: Universal compatibility across legacy systems, embedded microcontrollers, legacy Java runtimes, and older operating systems.
+- **Standard**: Kept for interoperability where clients lack support for modern elliptic curve suites.
+- **Tiers**: `CR1` (4096-bit), `CR2` (3072-bit), and `CR3` (2048-bit).
+
+---
+
+## Automated Renewal Cycles
+
+Certificates issued through CertSmith typically have a validity period of **90 days** (aligned with Let's Encrypt best practices), with recommended automatic renewal occurring at **60 days**.
+
+<Callout type="tip">
+  Short certificate lifespans drastically reduce the impact of compromised private keys and ensure that automated renewal pipelines are exercised continuously rather than once every few years.
+</Callout>

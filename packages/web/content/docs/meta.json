@@ -1,8 +1,9 @@
 {
-  "title": "Documentation",
   "pages": [
-    "index",
-    "acme-clients"
+    "(overview)",
+    "architecture",
+    "acme-clients",
+    "operations",
+    "reference"
   ]
 }
-

@@ -1,0 +1,76 @@
+---
+title: Caddy Server Integration
+description: Configure Caddy Web Server for fully automated, hands-off TLS certificate provisioning via CertSmith ACME endpoints.
+icon: Globe
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+[Caddy](https://caddyserver.com/) is a modern enterprise web server and reverse proxy written in Go with native, automated HTTPS built in. Caddy can be configured to use CertSmith as its automated certificate authority.
+
+---
+
+## 1. Global ACME Configuration in Caddyfile
+
+You can configure Caddy globally or per-site to use CertSmith. Specify the ACME directory URL and pass the path to the trusted Root CA certificate using the `ca_root` directive:
+
+<DynamicSnippet
+  title="Caddyfile (Global Options)"
+  template={`{
+    # Global options
+    email admin@internal.lan
+    acme_ca {{ORIGIN}}/acme/ce2/directory
+    acme_ca_root /etc/ssl/certs/certsmith-root.crt
+}
+
+# Virtual Host 1
+app.internal.lan {
+    reverse_proxy localhost:3000
+}
+
+# Virtual Host 2 (API backend)
+api.internal.lan {
+    reverse_proxy localhost:8080
+}`}
+/>
+
+---
+
+## 2. Per-Site ACME Customization
+
+If you need specific virtual hosts to use different cryptographic tiers (e.g., using **CR3** RSA for legacy systems and **CE2** ECDSA for standard web traffic):
+
+<DynamicSnippet
+  title="Caddyfile (Per-Site Tiers)"
+  template={`# Standard modern site using ECDSA CE2
+portal.internal.lan {
+    tls admin@internal.lan {
+        ca {{ORIGIN}}/acme/ce2/directory
+        ca_root /etc/ssl/certs/certsmith-root.crt
+        key_type ed25519
+    }
+    reverse_proxy 127.0.0.1:4000
+}
+
+# Legacy site requiring RSA 2048-bit (CR3)
+legacy-device.internal.lan {
+    tls admin@internal.lan {
+        ca {{ORIGIN}}/acme/cr3/directory
+        ca_root /etc/ssl/certs/certsmith-root.crt
+        key_type rsa2048
+    }
+    reverse_proxy 127.0.0.1:5000
+}`}
+/>
+
+---
+
+## 3. Verifying Caddy Auto-Renewal
+
+When Caddy starts, it automatically reaches out to the designated CertSmith directory endpoint, executes the challenge, receives the certificate chain, and stores the keys in Caddy's data directory (`/var/lib/caddy/.local/share/caddy/` or `~/.local/share/caddy/`).
+
+Inspect Caddy logs to verify successful issuance:
+
+```bash
+journalctl -u caddy -f | grep -i "certificate obtained successfully"
+```

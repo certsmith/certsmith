@@ -1,0 +1,162 @@
+---
+title: Root CA Trust Store Installation
+description: Comprehensive instructions to establish trust with your private Root CA across Windows, macOS, Linux, mobile devices, containers, and programming language runtimes.
+icon: ShieldCheck
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+import { Callout } from 'fumadocs-ui/components/callout';
+
+Before clients, browsers, and backend services can connect securely to services using CertSmith certificates without TLS warnings, the **CertSmith Root CA** must be installed in their local certificate trust store.
+
+---
+
+## Download Root CA Certificate
+
+Fetch the root certificate directly from the appliance:
+
+<RootCaDownloadSnippet />
+
+---
+
+## Operating System Installation
+
+<Tabs items={['Linux', 'macOS', 'Windows', 'iOS / iPadOS', 'Android']}>
+  <Tab value="Linux">
+    ### Debian / Ubuntu
+    ```bash
+    sudo cp root_ca.crt /usr/local/share/ca-certificates/certsmith-root.crt
+    sudo update-ca-certificates
+    ```
+
+    ### RHEL / CentOS / Fedora / Rocky Linux / AlmaLinux
+    ```bash
+    sudo cp root_ca.crt /etc/pki/ca-trust/source/anchors/certsmith-root.crt
+    sudo update-ca-trust extract
+    ```
+
+    ### Arch Linux / Manjaro
+    ```bash
+    sudo cp root_ca.crt /etc/ca-certificates/trust-source/anchors/certsmith-root.crt
+    sudo trust extract-compat
+    ```
+
+    ### Alpine Linux
+    ```bash
+    sudo cp root_ca.crt /usr/local/share/ca-certificates/certsmith-root.crt
+    sudo update-ca-certificates
+    ```
+
+    ### openSUSE / SLES
+    ```bash
+    sudo cp root_ca.crt /etc/pki/trust/anchors/certsmith-root.crt
+    sudo update-ca-certificates
+    ```
+  </Tab>
+
+  <Tab value="macOS">
+    ### macOS — CLI (Recommended)
+    ```bash
+    sudo security add-trusted-cert -d -r trustRoot \
+      -k /Library/Keychains/System.keychain root_ca.crt
+    ```
+
+    ### macOS — GUI (Keychain Access)
+    1. Double-click `root_ca.crt` or open **Keychain Access**.
+    2. Drag `root_ca.crt` into the **System** keychain.
+    3. Double-click the imported certificate.
+    4. Expand **Trust** and set **When using this certificate** to **Always Trust**.
+    5. Close the window and enter your administrator password.
+  </Tab>
+
+  <Tab value="Windows">
+    ### PowerShell (Run as Administrator)
+    ```powershell
+    Import-Certificate -FilePath .\root_ca.crt -CertStoreLocation Cert:\LocalMachine\Root
+    ```
+
+    ### Command Prompt (Run as Administrator)
+    ```cmd
+    certutil -addstore -f "ROOT" root_ca.crt
+    ```
+
+    ### Active Directory Group Policy (Domain Wide)
+    1. Open **Group Policy Management Console** (`gpmc.msc`).
+    2. Edit your target Group Policy Object (GPO).
+    3. Navigate to: **Computer Configuration → Policies → Windows Settings → Security Settings → Public Key Policies → Trusted Root Certification Authorities**.
+    4. Right-click → **Import...** → Select `root_ca.crt` → Finish.
+  </Tab>
+
+  <Tab value="iOS / iPadOS">
+    1. Send `root_ca.crt` via AirDrop or host it on an internal HTTPS page.
+    2. Download the profile: Settings will show **Profile Downloaded**.
+    3. Go to **Settings → Profile Downloaded** → Tap **Install** (enter passcode).
+    4. **Crucial**: Go to **Settings → General → About → Certificate Trust Settings**.
+    5. Under **Enable full trust for root certificates**, toggle the switch next to **CertSmith Root CA** to **ON**.
+  </Tab>
+
+  <Tab value="Android">
+    1. Transfer `root_ca.crt` to the device storage.
+    2. Open **Settings → Security & Privacy → More Security Settings → Encryption & Credentials**.
+    3. Tap **Install a certificate → CA Certificate**.
+    4. Acknowledge the warning and select `root_ca.crt`.
+  </Tab>
+</Tabs>
+
+---
+
+## Programming Languages & Container Runtimes
+
+Many runtime environments and tools maintain an independent trust store separate from the operating system:
+
+<Tabs items={['Docker Containers', 'Node.js', 'Python', 'Go', 'Java (JVM)']}>
+  <Tab value="Docker Containers">
+    Inject the root CA directly during image builds in your `Dockerfile`:
+
+    ```dockerfile
+    FROM alpine:3.20
+    RUN apk add --no-cache ca-certificates
+    COPY root_ca.crt /usr/local/share/ca-certificates/certsmith-root.crt
+    RUN update-ca-certificates
+    ```
+
+    Or mount it at container runtime:
+    ```bash
+    docker run -v /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro myapp:latest
+    ```
+  </Tab>
+
+  <Tab value="Node.js">
+    Node.js does not use the system CA store by default. Set the `NODE_EXTRA_CA_CERTS` environment variable:
+
+    ```bash
+    export NODE_EXTRA_CA_CERTS="/path/to/root_ca.crt"
+    node server.js
+    ```
+  </Tab>
+
+  <Tab value="Python">
+    Python libraries using `requests` or `urllib3` use `certifi`. Pass `REQUESTS_CA_BUNDLE`:
+
+    ```bash
+    export REQUESTS_CA_BUNDLE="/path/to/root_ca.crt"
+    python app.py
+    ```
+  </Tab>
+
+  <Tab value="Go">
+    Go uses the system trust store on Linux and macOS natively. Once installed via `update-ca-certificates`, standard `http.Client` calls work without extra flags.
+  </Tab>
+
+  <Tab value="Java (JVM)">
+    Import the root CA into the Java `cacerts` keystore:
+
+    ```bash
+    sudo keytool -importcert -trustcacerts \
+      -alias certsmith-root \
+      -file root_ca.crt \
+      -keystore $JAVA_HOME/lib/security/cacerts \
+      -storepass changeit -noprompt
+    ```
+  </Tab>
+</Tabs>

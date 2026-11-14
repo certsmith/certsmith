@@ -1,0 +1,93 @@
+---
+title: Monitoring & Health Checks
+description: Endpoints, metrics, audit logs, and process health monitoring for high-availability CertSmith operations.
+icon: Activity
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+Maintaining continuous visibility into your private CA guarantees that automated renewals never fail silently.
+
+---
+
+## Health Check Endpoint (`/healthz`)
+
+CertSmith exposes an aggregated health check JSON endpoint:
+
+<DynamicSnippet
+  title="Inspect Health Endpoint"
+  template={`curl -fsk {{ORIGIN}}/healthz`}
+/>
+
+### Healthy Response Example:
+```json
+{
+  "status": "healthy",
+  "uptime": "14d 6h 32m",
+  "appliance": {
+    "version": "1.1.1",
+    "domain": "ca.internal.lan"
+  },
+  "tiers": {
+    "ce1": { "status": "running", "pid": 1024, "port": 9001 },
+    "ce2": { "status": "running", "pid": 1025, "port": 9002 },
+    "ce3": { "status": "running", "pid": 1026, "port": 9003 },
+    "cr1": { "status": "running", "pid": 1027, "port": 9004 },
+    "cr2": { "status": "running", "pid": 1028, "port": 9005 },
+    "cr3": { "status": "running", "pid": 1029, "port": 9006 }
+  },
+  "database": {
+    "status": "connected",
+    "storage": "badgerDB"
+  }
+}
+```
+
+If any internal Step-CA daemon crashes or fails to respond, the top-level `status` switches to `"degraded"` or `"unhealthy"`, returning an HTTP `503 Service Unavailable` status code.
+
+---
+
+## Supervisor Status & Process Inspection
+
+Check the status of internal processes directly using `supervisorctl`:
+
+```bash
+docker exec -it certsmith supervisorctl status
+```
+
+Output:
+```
+nginx                            RUNNING   pid 14, uptime 3 days, 12:20:11
+step-ca:ce1                      RUNNING   pid 18, uptime 3 days, 12:20:11
+step-ca:ce2                      RUNNING   pid 19, uptime 3 days, 12:20:11
+step-ca:ce3                      RUNNING   pid 20, uptime 3 days, 12:20:11
+step-ca:cr1                      RUNNING   pid 21, uptime 3 days, 12:20:11
+step-ca:cr2                      RUNNING   pid 22, uptime 3 days, 12:20:11
+step-ca:cr3                      RUNNING   pid 23, uptime 3 days, 12:20:11
+web                              RUNNING   pid 25, uptime 3 days, 12:20:10
+```
+
+---
+
+## Inspecting ACME Audit Logs
+
+Step-CA logs all certificate orders, challenge authorizations, and issuance events in structured JSON format. Stream real-time logs from the container:
+
+```bash
+docker logs -f certsmith | grep -E "sign|acme|challenge"
+```
+
+### Typical Log Event:
+```json
+{
+  "level": "info",
+  "ts": "2026-11-14T02:15:30.412Z",
+  "provisioner": "acme-ce2",
+  "caller": "acme/order.go:215",
+  "msg": "Order finalized successfully",
+  "domain": "myapp.internal.lan",
+  "san": ["myapp.internal.lan"],
+  "serial": "18402910481920491823091",
+  "duration": "2160h0m0s"
+}
+```

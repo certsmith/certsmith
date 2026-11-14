@@ -1,0 +1,98 @@
+---
+title: Certbot Configuration
+description: Detailed guide for using the EFF Certbot client with CertSmith ACME endpoints across Linux distributions.
+icon: Terminal
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+[Certbot](https://certbot.eff.org/) is the most widely adopted ACME client. It supports standalone validation, webroot plugins, and web server plugins for Apache and Nginx.
+
+---
+
+## 1. Installation
+
+Install Certbot via snap (recommended by EFF) or your operating system's package manager:
+
+```bash
+sudo snap install --classic certbot
+sudo ln -s /snap/bin/certbot /usr/bin/certbot
+```
+
+---
+
+## 2. Standalone Mode Issuance
+
+If you are requesting a certificate on a machine where no web server is currently running on port 80:
+
+<DynamicSnippet
+  title="Certbot Standalone (CE2 ECDSA)"
+  template={`sudo certbot certonly \\
+  --standalone \\
+  --server {{ORIGIN}}/acme/ce2/directory \\
+  --key-type ecdsa \\
+  --elliptic-curve secp256r1 \\
+  -d app.internal.lan`}
+/>
+
+### Passing a Custom Root CA Bundle
+If the machine does not have the CertSmith Root CA installed globally in the system store, pass the root certificate via Python's `REQUESTS_CA_BUNDLE` environment variable:
+
+<DynamicSnippet
+  title="Certbot with Custom CA Bundle"
+  template={`REQUESTS_CA_BUNDLE=/etc/ssl/certs/certsmith-root.crt \\
+sudo -E certbot certonly \\
+  --standalone \\
+  --server {{ORIGIN}}/acme/ce2/directory \\
+  -d app.internal.lan`}
+/>
+
+---
+
+## 3. Webroot Mode (Existing Web Server)
+
+If you already have Nginx or Apache running on port 80:
+
+<DynamicSnippet
+  title="Certbot Webroot Mode"
+  template={`sudo certbot certonly \\
+  --webroot \\
+  -w /var/www/html \\
+  --server {{ORIGIN}}/acme/ce2/directory \\
+  --key-type ecdsa \\
+  --elliptic-curve secp256r1 \\
+  -d app.internal.lan`}
+/>
+
+---
+
+## 4. Deploy Hook & Service Reload
+
+To automatically reload your web server when Certbot renews a certificate:
+
+<DynamicSnippet
+  title="Certbot with Nginx Reload Hook"
+  template={`sudo certbot certonly \\
+  --webroot \\
+  -w /var/www/html \\
+  --server {{ORIGIN}}/acme/ce2/directory \\
+  --deploy-hook "systemctl reload nginx" \\
+  -d app.internal.lan`}
+/>
+
+---
+
+## 5. Automated Renewals via Systemd
+
+Certbot installs an automated systemd timer (`certbot.timer`) that runs twice daily:
+
+```bash
+# Check timer status
+systemctl status certbot.timer
+
+# Test renewal process without modifying production certificates
+sudo certbot renew --dry-run
+```
+
+All renewal configurations are preserved in `/etc/letsencrypt/renewal/<domain>.conf`, including the custom CertSmith ACME server endpoint.

@@ -1,0 +1,41 @@
+---
+title: Environment Variables
+description: Complete specification of configuration options, environment variables, and filesystem paths for the CertSmith appliance.
+icon: Settings
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+CertSmith is configured via environment variables supplied at container startup or defined in `docker-compose.yml`.
+
+---
+
+## Appliance Configuration Variables
+
+| Variable Name | Default Value | Description |
+| :--- | :--- | :--- |
+| `CERTSMITH_DOMAIN` | `localhost` | Primary Fully Qualified Domain Name (FQDN) or IP used to access the appliance and ACME endpoints. |
+| `CERTSMITH_ORGANIZATION`| `CertSmith Private Trust` | Organization name (`O`) embedded in generated Root and Intermediate CA certificates. |
+| `CERTSMITH_COUNTRY` | `US` | Two-letter ISO country code (`C`) for CA subjects. |
+| `CERTSMITH_ADMIN_EMAIL` | `admin@localhost` | Contact email associated with the appliance authority and internal notifications. |
+| `CERTSMITH_ROOT_VALIDITY`| `87600h` (10 Years) | Validity period duration for the initial Root CA certificate. |
+| `CERTSMITH_INTERMEDIATE_VALIDITY` | `26280h` (3 Years) | Validity period duration for Intermediate CA certificates. |
+| `CERTSMITH_DEFAULT_CERT_DURATION` | `2160h` (90 Days) | Default validity duration for issued leaf certificates. |
+| `PORTAL_PORT` | `443` | Internal listening port for HTTPS web traffic. |
+| `PORTAL_HTTP_PORT` | `80` | Internal listening port for HTTP traffic and ACME challenge validation. |
+
+---
+
+## Volume Mount Paths
+
+| Path Inside Container | Permissions | Purpose |
+| :--- | :--- | :--- |
+| `/app/data` | `0700` (`drwx------`) | Primary persistent state root directory. **Must be persisted across container restarts.** |
+| `/app/data/root_ca.crt` | `0644` (`-rw-r--r--`) | Public Root CA certificate. |
+| `/app/data/root_ca_key` | `0600` (`-rw-------`) | Private key for the Root CA. |
+| `/app/data/step-ca/` | `0700` (`drwx------`) | BadgerDB databases, tier intermediate certificates, and encrypted private keys for all 6 tiers. |
+| `/app/data/portal/` | `0700` (`drwx------`) | TLS leaf certificates and private keys securing the Nginx web portal. |
+
+<Callout type="warn">
+  Never mount the host Docker socket (`/var/run/docker.sock`) into the CertSmith container. CertSmith does not require Docker privileges to manage its internal PKI operations.
+</Callout>

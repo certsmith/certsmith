@@ -1,0 +1,38 @@
+---
+title: Reference Overview
+description: Technical reference materials, command-line interface manuals, environment configurations, and diagnostic runbooks.
+icon: BookOpen
+---
+
+import { Card, Cards } from 'fumadocs-ui/components/card';
+import { Terminal, Settings, Wrench } from 'lucide-react';
+
+Welcome to the CertSmith Technical Reference. This section contains exact specifications, configuration keys, CLI syntax, and troubleshooting solutions.
+
+---
+
+## Reference Chapters
+
+<Cards>
+  <Card
+    title="CLI Reference"
+    href="/docs/reference/cli"
+    icon={<Terminal className="size-5" />}
+  >
+    Detailed documentation for all `@certsmith/cli` subcommands: `cf`, `ca`, `docker`, `pki`, `config`, and interactive mode.
+  </Card>
+  <Card
+    title="Environment Variables"
+    href="/docs/reference/environment-variables"
+    icon={<Settings className="size-5" />}
+  >
+    Complete catalog of runtime environment variables, daemon flags, and volume mount paths.
+  </Card>
+  <Card
+    title="Troubleshooting & Diagnostics"
+    href="/docs/reference/troubleshooting"
+    icon={<Wrench className="size-5" />}
+  >
+    Solutions for common ACME challenge validation failures, untrusted certificate errors, and database recovery.
+  </Card>
+</Cards>

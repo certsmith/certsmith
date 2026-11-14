@@ -12,7 +12,7 @@ export async function GET(_req: Request, { params }: RouteContext<'/og/docs/[...
   return generateOGImage({
     title: page.data.title,
     description: page.data.description,
-    site: 'My App',
+    site: 'Certsmith',
     format: 'webp',
   });
 }

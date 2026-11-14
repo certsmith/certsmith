@@ -1,0 +1,72 @@
+---
+title: ACME Clients Overview
+description: Directory endpoints, client compatibility matrix, and foundational configuration guidelines.
+icon: Cable
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Card, Cards } from 'fumadocs-ui/components/card';
+
+CertSmith implements RFC 8555, making it directly compatible with all standard ACME v2 clients, ingress controllers, and automation agents.
+
+---
+
+## ACME Directory Endpoints
+
+Point your ACME clients to one of the following endpoints depending on your algorithm and curve preferences:
+
+### Elliptic Curve Cryptography (Recommended)
+- **CE2 (ECDSA P-256 - Default)**: <code className="text-fd-primary font-mono"><AcmeUrl tier="ce2" /></code>
+- **CE1 (ECDSA P-384)**: <code className="text-fd-primary font-mono"><AcmeUrl tier="ce1" /></code>
+- **CE3 (ECDSA P-521)**: <code className="text-fd-primary font-mono"><AcmeUrl tier="ce3" /></code>
+
+### RSA Cryptography
+- **CR3 (RSA 2048-bit - Legacy)**: <code className="text-fd-primary font-mono"><AcmeUrl tier="cr3" /></code>
+- **CR2 (RSA 3072-bit)**: <code className="text-fd-primary font-mono"><AcmeUrl tier="cr2" /></code>
+- **CR1 (RSA 4096-bit)**: <code className="text-fd-primary font-mono"><AcmeUrl tier="cr1" /></code>
+
+---
+
+## Client Compatibility Matrix
+
+| Client | Protocols / Challenges | Trust Anchor Requirement | Best Suited For |
+| :--- | :--- | :--- | :--- |
+| **Certbot** | HTTP-01, DNS-01, Standalone | System Trust Store / `REQUESTS_CA_BUNDLE` | Linux hosts, Apache, standalone VMs |
+| **Lego** | HTTP-01, DNS-01 (100+ DNS providers) | `--ca-certificates` flag | Go automation, CLI tooling, multi-DNS scripts |
+| **acme.sh** | HTTP-01, DNS-01, Stateless | `--ca-bundle` flag | Minimal environments, routers, OpenWrt, BSD |
+| **Caddy** | HTTP-01, TLS-ALPN-01, Internal | `ca_root` in Caddyfile | Reverse proxy with zero-config auto-renewals |
+| **Traefik** | HTTP-01, TLS-ALPN-01 | `rootCAs` in static configuration | Docker Swarm, microservices, container ingress |
+| **cert-manager**| HTTP-01, DNS-01 | `caBundle` in `ClusterIssuer` spec | Kubernetes clusters, ingress controllers, mTLS |
+
+---
+
+## Universal Prerequisites for ACME Clients
+
+1. **Root CA Trust**: Because CertSmith uses a private Root CA, your ACME client needs to trust the CertSmith Root CA. This can be accomplished either by installing the root certificate into the operating system trust store or passing the certificate path directly to the client's CA bundle configuration option.
+2. **Network Reachability**: The client must be able to reach CertSmith's port 443 (HTTPS) to fetch directory endpoints and place orders.
+3. **Challenge Validation**: CertSmith must be able to validate your chosen challenge (e.g., reaching port 80 on your client for `HTTP-01`, or resolving TXT records via DNS for `DNS-01`).
+
+---
+
+## Select Your Client Guide
+
+<Cards>
+  <Card title="Certbot Guide" href="/docs/acme-clients/certbot">
+    Standalone, webroot, hooks, and automated systemd renewals.
+  </Card>
+  <Card title="Lego Guide" href="/docs/acme-clients/lego">
+    High-performance Go client with extensive DNS provider support.
+  </Card>
+  <Card title="acme.sh Guide" href="/docs/acme-clients/acme-sh">
+    Pure POSIX shell script client with zero external dependencies.
+  </Card>
+  <Card title="Caddy Guide" href="/docs/acme-clients/caddy">
+    Native reverse proxy with automated TLS issuance and hot-reloading.
+  </Card>
+  <Card title="Traefik Guide" href="/docs/acme-clients/traefik">
+    Cloud-native application proxy with Docker and dynamic routing.
+  </Card>
+  <Card title="cert-manager Guide" href="/docs/acme-clients/cert-manager">
+    Automate TLS certificates across Kubernetes pods, services, and ingress.
+  </Card>
+</Cards>

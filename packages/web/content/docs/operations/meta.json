@@ -1,0 +1,15 @@
+{
+  "title": "Operations",
+  "description": "Production deployment, trust store distribution, key rotation, and monitoring",
+  "icon": "SlidersHorizontal",
+  "root": true,
+  "pages": [
+    "---Deployment & Distribution---",
+    "index",
+    "docker-compose",
+    "trust-store",
+    "---Maintenance & Health---",
+    "key-rotation",
+    "monitoring-health"
+  ]
+}

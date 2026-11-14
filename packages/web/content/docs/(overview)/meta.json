@@ -1,0 +1,12 @@
+{
+  "title": "Overview",
+  "description": "Introduction, quickstart, and foundational concepts",
+  "icon": "Compass",
+  "root": true,
+  "pages": [
+    "---Getting Started---",
+    "index",
+    "quickstart",
+    "concepts"
+  ]
+}

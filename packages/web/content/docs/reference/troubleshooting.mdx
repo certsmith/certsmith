@@ -1,0 +1,88 @@
+---
+title: Troubleshooting & Diagnostics
+description: Common issues, diagnostic steps, error codes, and recovery procedures for CertSmith and ACME clients.
+icon: Wrench
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+This guide addresses common error states encountered when issuing certificates and managing private trust.
+
+---
+
+## 1. ACME Challenge Validation Failures (`HTTP-01`)
+
+### Symptom:
+Certbot or Lego returns `urn:ietf:params:acme:error:connection: Fetching http://app.internal.lan/.well-known/acme-challenge/xxx: Timeout during connect`.
+
+### Cause:
+The CertSmith appliance cannot reach port 80 on the machine requesting the certificate to verify the challenge token.
+
+### Resolution:
+1. Verify internal DNS: Ensure the CertSmith container can resolve `app.internal.lan`:
+   ```bash
+   docker exec -it certsmith ping app.internal.lan
+   ```
+2. Check local firewalls: Ensure port 80 is not blocked between the CertSmith appliance and the target machine.
+3. Test manual retrieval: Place a test file in `.well-known/acme-challenge/test.txt` on the web server and verify you can curl it from inside the CertSmith container:
+   ```bash
+   docker exec -it certsmith curl -v http://app.internal.lan/.well-known/acme-challenge/test.txt
+   ```
+
+---
+
+## 2. Certificate Untrusted / Unknown Authority
+
+### Symptom:
+Browsers display `NET::ERR_CERT_AUTHORITY_INVALID` or curl returns `curl: (60) SSL certificate problem: unable to get local issuer certificate`.
+
+### Cause:
+The client machine or browser does not trust the CertSmith Root CA, or the web server is not serving the intermediate certificate chain.
+
+### Resolution:
+1. Confirm Root CA Installation: Ensure `root_ca.crt` is in the local trust store (see [Trust Store Installation](/docs/operations/trust-store)).
+2. Inspect Certificate Chain: Use OpenSSL to check if the server sends the full chain:
+   ```bash
+   openssl s_client -connect app.internal.lan:443 -servername app.internal.lan
+   ```
+   Look for `Certificate chain`:
+   - `0 s:CN = app.internal.lan, i:CN = CertSmith Intermediate CE2 CA`
+   - `1 s:CN = CertSmith Intermediate CE2 CA, i:CN = CertSmith Root CA`
+   If only certificate `0` is returned, configure your web server to serve `fullchain.pem` rather than `cert.pem`.
+
+---
+
+## 3. BadgerDB Lock / Process Crash Loop
+
+### Symptom:
+Step-CA fails to start with error: `cannot acquire lock on database: resource temporarily unavailable`.
+
+### Cause:
+An unclean shutdown or concurrent container instances attempted to mount the same BadgerDB directory simultaneously.
+
+### Resolution:
+1. Ensure no orphan step-ca processes are running:
+   ```bash
+   docker exec -it certsmith pkill -9 step-ca || true
+   ```
+2. Restart the container gracefully:
+   ```bash
+   docker restart certsmith
+   ```
+3. If corruption is detected, restore the tier database from your latest `/app/data` backup.
+
+---
+
+## 4. Resetting the Appliance to Initial State
+
+<Callout type="warn">
+  Resetting the appliance deletes all existing certificates, private keys, and ACME account records. All previously issued certificates will need to be re-issued.
+</Callout>
+
+To perform a clean factory reset:
+
+```bash
+docker compose down
+docker volume rm certsmith_production_data
+docker compose up -d
+```

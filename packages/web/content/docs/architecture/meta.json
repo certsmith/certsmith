@@ -1,0 +1,13 @@
+{
+  "title": "Architecture",
+  "description": "System topology, PKI hierarchy, and security model",
+  "icon": "Layers",
+  "root": true,
+  "pages": [
+    "---System Architecture---",
+    "index",
+    "hierarchy",
+    "step-ca-engine",
+    "security-model"
+  ]
+}

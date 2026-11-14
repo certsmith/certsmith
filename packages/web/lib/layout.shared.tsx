@@ -17,15 +17,18 @@ export function baseOptions(): BaseLayoutProps {
         text: 'Trust Portal',
         url: '/',
         active: 'nested-url',
+        on: 'nav',
       },
       {
         text: 'Documentation',
         url: '/docs',
         active: 'nested-url',
+        on: 'nav',
       },
       {
         text: 'Root CA (.crt)',
         url: '/root_ca.crt',
+        on: 'nav',
       },
     ],
     githubUrl: `https://github.com/${gitConfig.user}/${gitConfig.repo}`,

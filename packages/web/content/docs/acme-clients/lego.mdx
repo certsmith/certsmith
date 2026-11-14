@@ -1,0 +1,87 @@
+---
+title: Lego CLI Configuration
+description: Issue and automate TLS certificates using Lego, the official Go ACME library and CLI client.
+icon: Blocks
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+[Lego](https://go-acme.github.io/lego/) is a standalone, single-binary ACME client written in Go. It supports more than 100 DNS providers, making it ideal for wildcard certificates and automation scripts.
+
+---
+
+## 1. Installation
+
+Download the pre-compiled binary for your architecture from GitHub releases:
+
+```bash
+# Example for Linux AMD64
+curl -fsSL https://github.com/go-acme/lego/releases/download/v4.20.4/lego_v4.20.4_linux_amd64.tar.gz | tar -xz
+sudo mv lego /usr/local/bin/
+lego --version
+```
+
+---
+
+## 2. HTTP-01 Validation
+
+To obtain a certificate using Lego's built-in HTTP server:
+
+<DynamicSnippet
+  title="Lego HTTP-01 (CE2 ECDSA)"
+  template={`lego \\
+  --email admin@internal.lan \\
+  --server {{ORIGIN}}/acme/ce2/directory \\
+  --ca-certificates /path/to/root_ca.crt \\
+  --key-type ec256 \\
+  --domains app.internal.lan \\
+  --http \\
+  run`}
+/>
+
+Lego outputs certificate bundles directly into `.lego/certificates/`:
+- `certificates/app.internal.lan.crt` (Full certificate chain)
+- `certificates/app.internal.lan.key` (Private key)
+- `certificates/app.internal.lan.issuer.crt` (Intermediate CA certificate)
+
+---
+
+## 3. DNS-01 Validation with Cloudflare / Bind / RFC2136
+
+Lego shines in automated DNS-01 validation. Here is an example using RFC 2136 (Standard dynamic DNS update for BIND / PowerDNS / pfSense):
+
+<DynamicSnippet
+  title="Lego DNS-01 via RFC 2136"
+  template={`export RFC2136_NAMESERVER="192.168.1.1:53"
+export RFC2136_TSIG_ALGORITHM="hmac-sha256."
+export RFC2136_TSIG_KEY="certsmith-key"
+export RFC2136_TSIG_SECRET="your-base64-secret"
+
+lego \\
+  --email admin@internal.lan \\
+  --server {{ORIGIN}}/acme/ce2/directory \\
+  --ca-certificates /path/to/root_ca.crt \\
+  --key-type ec256 \\
+  --dns rfc2136 \\
+  --domains "*.internal.lan" \\
+  --domains "internal.lan" \\
+  run`}
+/>
+
+---
+
+## 4. Automatic Renewals
+
+Renew certificates using the `renew` sub-command:
+
+<DynamicSnippet
+  title="Lego Renewal Command"
+  template={`lego \\
+  --email admin@internal.lan \\
+  --server {{ORIGIN}}/acme/ce2/directory \\
+  --ca-certificates /path/to/root_ca.crt \\
+  --domains app.internal.lan \\
+  renew --days 30`}
+/>
+
+Add this command to a cron job (`/etc/cron.daily/lego-renewal`) with a post-renewal reload hook.
