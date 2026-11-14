@@ -59,7 +59,9 @@ ARG STEP_CA_VERSION=0.30.2
 # Non-interactive apt + base paths
 ENV DEBIAN_FRONTEND=noninteractive \
     CERTSMITH_HOME=/certsmith \
-    CERTSMITH_DATA=/data
+    CERTSMITH_DATA=/data \
+    HOSTNAME=0.0.0.0 \
+    PORT=3000
 
 WORKDIR ${CERTSMITH_HOME}
 
