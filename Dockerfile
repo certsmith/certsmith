@@ -86,8 +86,10 @@ RUN chmod +x /tmp/scripts/*.sh && \
 # Nginx configuration templates
 COPY configs/ /etc/certsmith/configs/
 
-# Next.js + Fumadocs Web Application
-COPY --from=web-builder /app/packages/web/ /var/www/certsmith-web/
+# Next.js + Fumadocs Web Application (Standalone Production Build)
+COPY --from=web-builder /app/packages/web/.next/standalone /var/www/certsmith-web
+COPY --from=web-builder /app/packages/web/.next/static /var/www/certsmith-web/packages/web/.next/static
+COPY --from=web-builder /app/packages/web/public /var/www/certsmith-web/packages/web/public
 
 # Tools (forge, test) + shared libraries
 COPY tools/ /usr/local/share/certsmith/tools/

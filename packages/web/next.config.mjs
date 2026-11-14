@@ -4,6 +4,7 @@ const withMDX = createMDX();
 
 /** @type {import('next').NextConfig} */
 const config = {
+  output: 'standalone',
   reactStrictMode: true,
   serverExternalPackages: ['@takumi-rs/core'],
 };

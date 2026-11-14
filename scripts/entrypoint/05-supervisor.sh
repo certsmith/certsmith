@@ -28,9 +28,15 @@ supervisor::start_step_ca() {
 # supervisor::start_web
 # ------------------------------------------
 supervisor::start_web() {
-    if [ -d "/var/www/certsmith-web" ]; then
+    if [ -f "/var/www/certsmith-web/packages/web/server.js" ]; then
         echo "[certsmith] Starting Next.js + Fumadocs Web Service on port 3000..."
-        (cd /var/www/certsmith-web && node node_modules/.bin/next start -p 3000) &
+        (cd /var/www/certsmith-web/packages/web && PORT=3000 node server.js) &
+        local pid=$!
+        PIDS+=("${pid}")
+        echo "[certsmith] Web service started (PID: ${pid})."
+    elif [ -f "/var/www/certsmith-web/server.js" ]; then
+        echo "[certsmith] Starting Next.js + Fumadocs Web Service on port 3000..."
+        (cd /var/www/certsmith-web && PORT=3000 node server.js) &
         local pid=$!
         PIDS+=("${pid}")
         echo "[certsmith] Web service started (PID: ${pid})."
